@@ -23,7 +23,7 @@ import org.mapsforge.map.layer.overlay.Marker
 import org.mapsforge.map.layer.overlay.Polyline
 import org.mapsforge.map.layer.renderer.TileRendererLayer
 import org.mapsforge.map.reader.MapFile
-import org.mapsforge.map.rendertheme.InternalRenderTheme
+import org.mapsforge.map.rendertheme.internal.MapsforgeThemes
 import java.io.File
 
 /**
@@ -88,11 +88,20 @@ class MapController(
         newMapView.setBuiltInZoomControls(false)
         newMapView.mapScaleBar.isVisible = true
 
+        val tileCache: TileCache = AndroidUtil.createTileCache(
+            context,
+            "offline_tiles",
+            newMapView.model.displayModel.tileSize,
+            1f,
+            newMapView.model.frameBufferModel.overdrawFactor
+        )
+
         val mapDataStore: MapDataStore = MapFile(mapFile)
         val layer = AndroidUtil.createTileRendererLayer(
+            tileCache,
             newMapView.model.mapViewPosition,
             mapDataStore,
-            InternalRenderTheme.OSMARENDER,
+            MapsforgeThemes.DEFAULT,
             false,
             true,
             false
@@ -189,10 +198,11 @@ class MapController(
         if (mode == TrackingMode.IDLE) return
 
         val isReturning = mode == TrackingMode.RETURNING
+        val density = context.resources.displayMetrics.density
         val paintStroke = AndroidGraphicFactory.INSTANCE.createPaint().apply {
             color = if (isReturning) ACCENT_COLOR_MAPSFORGE else 0xFF9E9E9E.toInt()
-            strokeWidth = (if (isReturning) 8f else 3f) * context.resources.displayMetrics.density
-            isDashed = true
+            strokeWidth = (if (isReturning) 8f else 3f) * density
+            setDashPathEffect(floatArrayOf(12f * density, 8f * density))
         }
         val polyline = Polyline(paintStroke, AndroidGraphicFactory.INSTANCE)
         polyline.latLongs.add(LatLong(current.latitude, current.longitude))
