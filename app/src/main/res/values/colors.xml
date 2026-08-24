@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background_dark">#1C1C1C</color>
+    <color name="panel_dark">#2A2A2A</color>
+    <color name="text_white">#FFFFFF</color>
+    <color name="text_gray">#B0B0B0</color>
+
+    <!-- Единый акцентный цвет: кнопка "Старт/Стоп/Домой", стрелка компаса,
+         значок положения пользователя на карте -->
+    <color name="accent_orange">#E65100</color>
+
+    <!-- Пунктирная линия до точки старта (обычный режим) -->
+    <color name="dashed_line_gray">#9E9E9E</color>
+
+    <!-- Трек активной записи -->
+    <color name="track_line_black">#000000</color>
+</resources>

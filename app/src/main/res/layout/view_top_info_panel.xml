@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/panel_dark"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/distanceTraveledText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/text_white"
+            android:textSize="16sp"
+            tools:text="Путь: 1.2 км" />
+
+        <TextView
+            android:id="@+id/distanceToHomeText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:textColor="@color/text_white"
+            android:textSize="16sp"
+            tools:text="До старта: 850 м" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/satellitesText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center"
+        android:textColor="@color/text_gray"
+        android:textSize="13sp"
+        tools:text="Спутники GPS: 20   ГЛОНАСС: 12" />
+
+</LinearLayout>

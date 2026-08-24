@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TrailBack</string>
+    <string name="app_tagline">Find your way back</string>
+
+    <!-- Основной экран -->
+    <string name="button_start">START</string>
+    <string name="button_stop">STOP</string>
+    <string name="button_home">HOME</string>
+    <string name="distance_traveled_label">Distance</string>
+    <string name="distance_to_home_label">To start</string>
+    <string name="satellites_label">Satellites GPS: %1$d   GLONASS: %2$d</string>
+    <string name="low_accuracy_warning">Satellite accuracy is low (&gt;50 m). Continue?</string>
+    <string name="confirm_start_title">Start recording?</string>
+    <string name="confirm_stop_title">Stop recording?</string>
+    <string name="confirm_home_title">Start return mode?</string>
+
+    <!-- Прибытие домой -->
+    <string name="arrived_dialog_title">You are back!</string>
+    <string name="arrived_dialog_message">Have you arrived at your starting point?</string>
+    <string name="arrived_dialog_yes">Yes</string>
+    <string name="arrived_dialog_no">No</string>
+    <string name="manual_arrival_button">I am here</string>
+
+    <!-- Уведомления -->
+    <string name="notification_channel_tracking">Route tracking</string>
+    <string name="notification_channel_alerts">Alerts</string>
+    <string name="tracking_notification_idle">Ready</string>
+    <string name="tracking_notification_recording">Recording your route</string>
+    <string name="tracking_notification_returning">Returning to start point</string>
+    <string name="notification_stopped_title">Recording stopped</string>
+    <string name="notification_stopped_text">Your route has been saved</string>
+    <string name="notification_returning_title">Return mode enabled</string>
+    <string name="notification_returning_text">Follow the arrow to the start point</string>
+    <string name="notification_arrived_title">You are back!</string>
+
+    <!-- Меню -->
+    <string name="menu_entry_points">Saved start points</string>
+    <string name="menu_marked_places">Marked places</string>
+    <string name="menu_compass">Compass</string>
+    <string name="menu_compass_settings">Compass settings</string>
+    <string name="menu_offline_maps">Offline maps</string>
+    <string name="menu_calibration">Calibration</string>
+    <string name="menu_info">Information</string>
+    <string name="menu_language">Language</string>
+
+    <string name="north_mode_true">True north</string>
+    <string name="north_mode_magnetic">Magnetic north</string>
+
+    <string name="clear_entry_points_warning_1">Delete all start points?</string>
+    <string name="clear_entry_points_warning_2">Are you sure?</string>
+    <string name="clear_entry_points_warning_3">This action is dangerous and cannot be undone!</string>
+
+    <string name="mark_place_dialog_title">Mark this place</string>
+    <string name="mark_place_hint">Enter a name</string>
+
+    <string name="calibration_instructions_title">Compass calibration</string>
+    <string name="calibration_instructions_text">Rotate your phone in a figure-eight motion several times to improve compass accuracy.</string>
+
+    <string name="open_in_navigation_app">Open in navigation app</string>
+    <string name="copy_coordinates">Copy coordinates</string>
+    <string name="coordinates_copied">Coordinates copied</string>
+
+    <string name="recovery_dialog_title">Unfinished route found</string>
+    <string name="recovery_dialog_message">The app was closed while recording a route. Continue recording from where it stopped?</string>
+    <string name="recovery_dialog_continue">Continue</string>
+    <string name="recovery_dialog_cancel">Cancel</string>
+</resources>
