@@ -23,7 +23,7 @@ import org.mapsforge.map.layer.overlay.Marker
 import org.mapsforge.map.layer.overlay.Polyline
 import org.mapsforge.map.layer.renderer.TileRendererLayer
 import org.mapsforge.map.reader.MapFile
-import org.mapsforge.map.rendertheme.internal.MapsforgeThemes
+import org.mapsforge.map.rendertheme.InternalRenderTheme
 import java.io.File
 
 /**
@@ -101,7 +101,7 @@ class MapController(
             tileCache,
             newMapView.model.mapViewPosition,
             mapDataStore,
-            MapsforgeThemes.DEFAULT,
+            InternalRenderTheme.OSMARENDER,
             false,
             true,
             false
@@ -220,9 +220,9 @@ class MapController(
         userPositionMarker?.let { mapView.layerManager.layers.remove(it) }
         // Значок стрелки подставляется из drawable/ic_user_position.xml (плейсхолдер,
         // пользователь заменит своим значком — цвет #E65100 уже зашит в drawable).
-        val bitmap = AndroidGraphicFactory.convertToBitmap(
-            androidx.core.content.ContextCompat.getDrawable(context, R.drawable.ic_user_position)
-        )
+        val drawable = androidx.core.content.ContextCompat.getDrawable(context, R.drawable.ic_user_position)
+            ?: return
+        val bitmap = AndroidGraphicFactory.convertToBitmap(drawable)
         val marker = Marker(LatLong(location.latitude, location.longitude), bitmap, 0, 0)
         mapView.layerManager.layers.add(marker)
         userPositionMarker = marker
@@ -258,7 +258,7 @@ class MapController(
     }
 
     fun onDestroy() {
-        tileRendererLayer?.let { it.mapDataStore?.close() }
+        tileRendererLayer?.let { it.mapDataStore.close() }
         tileDownloadLayer?.onDestroy()
         mapView?.destroyAll()
         AndroidGraphicFactory.clearResourceMemoryCache()
@@ -272,7 +272,7 @@ class MapController(
         // на масштабе всей страны, выше 20 офлайн-тайлы обычно не детализированы.
         private const val ZOOM_LEVEL_MIN: Byte = 2
         private const val ZOOM_LEVEL_MAX: Byte = 20
-        private const val ZOOM_LEVEL_MAX_ONLINE: Byte = 19
+        private const val ZOOM_LEVEL_MAX_ONLINE: Byte = 18
         private const val DEFAULT_ZOOM_LEVEL: Byte = 15
     }
 }

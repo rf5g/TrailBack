@@ -117,6 +117,7 @@ dependencies {
     implementation("org.mapsforge:mapsforge-core:${property("versionMapsforgeCore")}")
     implementation("org.mapsforge:mapsforge-map:${property("versionMapsforgeMap")}")
     implementation("org.mapsforge:mapsforge-map-android:${property("versionMapsforgeMapAndroid")}")
+    implementation("org.mapsforge:mapsforge-themes:${property("versionMapsforgeMap")}")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.13")
