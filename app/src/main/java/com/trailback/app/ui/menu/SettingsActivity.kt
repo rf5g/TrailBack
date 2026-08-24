@@ -58,7 +58,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.languageSection.visibility = visibleIf(section == SECTION_LANGUAGE)
 
         setupCompassSection(app)
-        setupMapsSection(app)
+        setupMapsSection()
         setupCalibrationSection()
         setupInfoSection()
         setupLanguageSection(app)
@@ -82,7 +82,7 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupMapsSection(app: TrailBackApp) {
+    private fun setupMapsSection() {
         updateMapsSectionText()
         binding.chooseMapsFolderButton.setOnClickListener {
             pickMapsFolder.launch(null)

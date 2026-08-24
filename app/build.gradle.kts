@@ -21,20 +21,26 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // Подпись читается из keystore.properties (не хранится в репозитории)
+    // Подпись читается из keystore.properties (не хранится в репозитории).
+    // Если реальный keystore не настроен (например, GitHub secrets ещё не
+    // заполнены — файл release.jks будет пустым/0 байт), сборка идёт БЕЗ
+    // подписи вместо падения: signing применяется только когда файл
+    // существует и содержит реальные данные.
     val keystorePropertiesFile = rootProject.file("keystore.properties")
     val keystoreProperties = Properties()
-    val hasKeystoreFile = keystorePropertiesFile.exists()
-    if (hasKeystoreFile) {
+    if (keystorePropertiesFile.exists()) {
         keystoreProperties.load(FileInputStream(keystorePropertiesFile))
     }
 
     signingConfigs {
         create("release") {
-            val storeFilePath = keystoreProperties.getProperty("storeFile")
-                ?: System.getenv("KEYSTORE_PATH")
-            if (storeFilePath != null) {
-                storeFile = file(storeFilePath)
+            val storeFilePath = (keystoreProperties.getProperty("storeFile") ?: System.getenv("KEYSTORE_PATH"))
+                ?.takeIf { it.isNotBlank() }
+            val resolvedStoreFile = storeFilePath?.let { file(it) }
+                ?.takeIf { it.exists() && it.length() > 0 }
+
+            if (resolvedStoreFile != null) {
+                storeFile = resolvedStoreFile
                 storePassword = keystoreProperties.getProperty("storePassword")
                     ?: System.getenv("KEYSTORE_PASSWORD")
                 keyAlias = keystoreProperties.getProperty("keyAlias")

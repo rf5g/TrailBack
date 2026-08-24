@@ -137,7 +137,6 @@ class MapActivity : AppCompatActivity() {
 
     private fun onLocationUpdated(location: Location) {
         mapController.updateUserPositionMarker(location)
-        val app = application as TrailBackApp
         val entryPoint = viewModel.activeEntryPoint.value
         mapController.updateHomeLine(location, entryPoint, viewModel.mode.value)
 
