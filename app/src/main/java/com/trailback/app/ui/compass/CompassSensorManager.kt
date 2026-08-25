@@ -8,7 +8,6 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
 import com.trailback.app.data.repository.NorthMode
-import kotlin.math.abs
 
 /**
  * SensorManager (магнитное поле + акселерометр), ~20 Гц (п.8 ТЗ).
@@ -99,20 +98,13 @@ class CompassSensorManager(
         if (delta > 180f) delta -= 360f
         if (delta < -180f) delta += 360f
 
-        // Резкие скачки (например, после калибровки) применяем сразу без сглаживания
-        val result = if (abs(delta) > SNAP_THRESHOLD_DEGREES) {
-            newHeading
-        } else {
-            (previous + SMOOTHING_FACTOR * delta + 360f) % 360f
-        }
-        return result
+        return (previous + SMOOTHING_FACTOR * delta + 360f) % 360f
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
     companion object {
         private const val SENSOR_DELAY_MICROS = 50_000 // ~20 Гц
-        private const val SMOOTHING_FACTOR = 0.15f
-        private const val SNAP_THRESHOLD_DEGREES = 45f
+        private const val SMOOTHING_FACTOR = 0.10f
     }
 }

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_dark">
@@ -34,40 +33,41 @@
         app:layout_constraintTop_toBottomOf="@id/topInfoPanel"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <!-- Правый край, сверху вниз: меню, масштаб, обновить геолокацию, быстрая отметка -->
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_margin="12dp"
+    <!-- Верхний правый угол: меню и отмеченные места (быстрая отметка), друг под другом -->
+    <ImageButton
+        android:id="@+id/menuButton"
+        style="@style/SquareIconButton"
+        android:src="@drawable/ic_menu"
         app:layout_constraintTop_toBottomOf="@id/topInfoPanel"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintEnd_toEndOf="parent" />
 
-        <ImageButton
-            android:id="@+id/menuButton"
-            style="@style/RightEdgeIconButton"
-            android:src="@drawable/ic_menu" />
+    <ImageButton
+        android:id="@+id/quickMarkButton"
+        style="@style/SquareIconButton"
+        android:src="@drawable/ic_flag"
+        app:layout_constraintTop_toBottomOf="@id/menuButton"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-        <ImageButton
-            android:id="@+id/zoomInButton"
-            style="@style/RightEdgeIconButton"
-            android:src="@drawable/ic_zoom_in" />
+    <!-- Центр экрана: масштаб + и - -->
+    <ImageButton
+        android:id="@+id/zoomInButton"
+        style="@style/SquareIconButton"
+        android:src="@drawable/ic_zoom_in"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/zoomOutButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="0.5" />
 
-        <ImageButton
-            android:id="@+id/zoomOutButton"
-            style="@style/RightEdgeIconButton"
-            android:src="@drawable/ic_zoom_out" />
-
-        <ImageButton
-            android:id="@+id/recenterButton"
-            style="@style/RightEdgeIconButton"
-            android:src="@drawable/ic_recenter" />
-
-        <ImageButton
-            android:id="@+id/quickMarkButton"
-            style="@style/RightEdgeIconButton"
-            android:src="@drawable/ic_flag" />
-    </LinearLayout>
+    <ImageButton
+        android:id="@+id/zoomOutButton"
+        style="@style/SquareIconButton"
+        android:src="@drawable/ic_zoom_out"
+        app:layout_constraintTop_toBottomOf="@id/zoomInButton"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="0.5" />
 
     <!-- Ручная кнопка "Я на месте" — видима только в режиме "Домой" -->
     <Button
@@ -80,7 +80,15 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_margin="16dp" />
 
-    <!-- Главная кнопка -->
+    <!-- Кнопка центрирования: ближе к правому нижнему углу, но выше главной кнопки -->
+    <ImageButton
+        android:id="@+id/recenterButton"
+        style="@style/SquareIconButton"
+        android:src="@drawable/ic_recenter"
+        app:layout_constraintBottom_toTopOf="@id/manualArrivalButton"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Главная кнопка — без изменений -->
     <Button
         android:id="@+id/mainActionButton"
         style="@style/MainActionButton"

@@ -77,6 +77,14 @@ class MapViewModel(
         _activeEntryPoint.value = null
     }
 
+    /** Вызывается при возврате на карту — активная точка могла измениться
+     * в экране "Сохранённые точки входа". */
+    fun refreshActiveEntryPoint() {
+        viewModelScope.launch {
+            _activeEntryPoint.value = repository.getActiveEntryPoint()
+        }
+    }
+
     class Factory(private val app: TrailBackApp) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

@@ -61,4 +61,12 @@
     <string name="recovery_dialog_message">Приложение было закрыто во время записи маршрута. Продолжить запись с того места, где она прервалась?</string>
     <string name="recovery_dialog_continue">Продолжить</string>
     <string name="recovery_dialog_cancel">Отменить</string>
+
+    <string name="select_entry_point_title">Выбрать эту точку?</string>
+    <string name="select_entry_point_locked_in_returning">Нельзя сменить точку в активном режиме "Домой"</string>
+    <string name="entry_point_set_active">Точка установлена как активная</string>
+
+    <string name="menu_exit">Выход</string>
+    <string name="exit_confirm_message">Вы уверены, что хотите выйти из приложения?</string>
+    <string name="exit_locked_in_returning">Нельзя выйти из приложения в активном режиме "Домой"</string>
 </resources>

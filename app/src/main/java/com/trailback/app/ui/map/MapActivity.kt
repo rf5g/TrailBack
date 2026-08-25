@@ -6,7 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.location.GnssStatus
 import android.location.Location
+import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
@@ -24,6 +26,7 @@ import com.trailback.app.data.repository.TrackingMode
 import com.trailback.app.databinding.ActivityMapBinding
 import com.trailback.app.service.TrackingService
 import com.trailback.app.ui.compass.CompassActivity
+import com.trailback.app.ui.compass.CompassSensorManager
 import com.trailback.app.ui.menu.MenuActivity
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -38,9 +41,26 @@ class MapActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMapBinding
     private lateinit var viewModel: MapViewModel
     private lateinit var mapController: MapController
+    private lateinit var compassSensorManager: CompassSensorManager
     private var trackingService: TrackingService? = null
     private var isServiceBound = false
     private var lastKnownLocation: Location? = null
+    private var currentHeading: Float = 0f
+
+    private val gnssStatusCallback = object : GnssStatus.Callback() {
+        override fun onSatelliteStatusChanged(status: GnssStatus) {
+            var gpsCount = 0
+            var glonassCount = 0
+            for (i in 0 until status.satelliteCount) {
+                when (status.getConstellationType(i)) {
+                    GnssStatus.CONSTELLATION_GPS -> gpsCount++
+                    GnssStatus.CONSTELLATION_GLONASS -> glonassCount++
+                }
+            }
+            binding.topInfoPanel.satellitesText.text =
+                getString(R.string.satellites_label, gpsCount, glonassCount)
+        }
+    }
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
@@ -73,6 +93,12 @@ class MapActivity : AppCompatActivity() {
         mapController = MapController(this, binding.mapContainer)
         mapController.setupMap(app.settingsStore.offlineMapsUri, hasInternetConnection())
 
+        compassSensorManager = CompassSensorManager(this) { heading ->
+            currentHeading = heading
+            binding.miniCompassView.headingDegrees = heading
+        }
+        compassSensorManager.northMode = app.settingsStore.northMode
+
         checkCrashRecoveryThenStart(app)
         setupButtons()
         setupMapControlButtons()
@@ -97,6 +123,32 @@ class MapActivity : AppCompatActivity() {
             bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
             isServiceBound = true
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        compassSensorManager.start()
+        registerGnssStatusCallback()
+        viewModel.refreshActiveEntryPoint()
+    }
+
+    override fun onPause() {
+        compassSensorManager.stop()
+        unregisterGnssStatusCallback()
+        super.onPause()
+    }
+
+    private fun registerGnssStatusCallback() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) return
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        locationManager.registerGnssStatusCallback(gnssStatusCallback, null)
+    }
+
+    private fun unregisterGnssStatusCallback() {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        locationManager.unregisterGnssStatusCallback(gnssStatusCallback)
     }
 
     override fun onStop() {
@@ -136,7 +188,7 @@ class MapActivity : AppCompatActivity() {
     }
 
     private fun onLocationUpdated(location: Location) {
-        mapController.updateUserPositionMarker(location)
+        mapController.updateUserPositionMarker(location, currentHeading)
         val entryPoint = viewModel.activeEntryPoint.value
         mapController.updateHomeLine(location, entryPoint, viewModel.mode.value)
 
@@ -380,6 +432,12 @@ class MapActivity : AppCompatActivity() {
                 app.trackingRepository.observeTrackForEntryPoint(entryPoint.id).collect { points ->
                     mapController.updateTrackLine(points, viewModel.mode.value)
                 }
+            }
+        }
+        lifecycleScope.launch {
+            val app = application as TrailBackApp
+            app.database.markedPlaceDao().observeAll().collect { places ->
+                mapController.updateMarkedPlaces(places)
             }
         }
     }

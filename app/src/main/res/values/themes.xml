@@ -8,12 +8,12 @@
         <item name="android:statusBarColor">@color/background_dark</item>
     </style>
 
-    <style name="RightEdgeIconButton">
-        <item name="android:layout_width">44dp</item>
-        <item name="android:layout_height">44dp</item>
-        <item name="android:layout_marginBottom">8dp</item>
-        <item name="android:background">@drawable/bg_circle_panel</item>
-        <item name="android:padding">10dp</item>
+    <style name="SquareIconButton">
+        <item name="android:layout_width">60dp</item>
+        <item name="android:layout_height">60dp</item>
+        <item name="android:layout_margin">8dp</item>
+        <item name="android:background">@drawable/bg_square_rounded_button</item>
+        <item name="android:padding">14dp</item>
         <item name="android:tint">@color/text_white</item>
     </style>
 
