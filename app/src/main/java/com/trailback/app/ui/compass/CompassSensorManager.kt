@@ -8,13 +8,22 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
 import com.trailback.app.data.repository.NorthMode
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
- * SensorManager (магнитное поле + акселерометр), ~20 Гц (п.8 ТЗ).
- * Истинный север считается штатным Android API GeomagneticField —
- * отдельная реализация модели WMM не нужна.
- * Сглаживание курса — экспоненциальный фильтр, чтобы диск компаса
- * не дёргался от шума датчика (см. решение по компасу).
+ * Использует системный виртуальный датчик TYPE_ROTATION_VECTOR вместо
+ * ручного скрещивания акселерометра и магнетометра: Android сам объединяет
+ * акселерометр, магнетометр и гироскоп (если есть) и отдаёт уже очищенный
+ * от наклонов телефона вектор вращения — меньше шума на входе, чем при
+ * самостоятельной сборке через getRotationMatrix(gravity, geomagnetic).
+ *
+ * Сглаживание — EMA (экспоненциальное скользящее среднее) отдельно по
+ * синусу и косинусу азимута, а не по самому углу. Сглаживание угла напрямую
+ * ломается на переходе 359°→0° (компас "прокручивается" через 180°, а не
+ * идёт кратчайшим путём) — раскладка на sin/cos и последующая сборка через
+ * atan2 гарантирует кратчайший путь поворота стрелки без рывков.
  */
 class CompassSensorManager(
     context: Context,
@@ -22,29 +31,22 @@ class CompassSensorManager(
 ) : SensorEventListener {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-    private val magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+    private val rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
 
-    private val gravity = FloatArray(3)
-    private val geomagnetic = FloatArray(3)
     private val rotationMatrix = FloatArray(9)
     private val orientation = FloatArray(3)
 
-    private var hasGravity = false
-    private var hasGeomagnetic = false
+    private var smoothedSin: Float? = null
+    private var smoothedCos: Float? = null
 
-    private var smoothedHeading: Float? = null
     private var magneticDeclination = 0f
 
     var northMode: NorthMode = NorthMode.TRUE
 
     /**
      * Текущее магнитное склонение в градусах. Нужно снаружи, чтобы привести
-     * азимут на точку старта (Location.bearingTo всегда возвращает азимут
-     * относительно ИСТИННОГО севера) к той же системе отсчёта, что и текущий
-     * headingDegrees — иначе в магнитном режиме стрелка "домой" и циферблат
-     * будут рассинхронизированы на величину склонения (см. решение по багу
-     * "стрелка не указывает на место").
+     * азимут на точку старта (Location.bearingTo всегда относительно
+     * ИСТИННОГО севера) к той же системе отсчёта, что и headingDegrees.
      */
     val currentDeclination: Float
         get() = magneticDeclination
@@ -60,62 +62,71 @@ class CompassSensorManager(
         magneticDeclination = field.declination
     }
 
+    /** Опрос строго в onResume/onPause (жизненный цикл Android) — экономия батареи. */
     fun start() {
-        sensorManager.registerListener(this, accelerometer, SENSOR_DELAY_MICROS)
-        sensorManager.registerListener(this, magnetometer, SENSOR_DELAY_MICROS)
+        sensorManager.registerListener(this, rotationVectorSensor, SENSOR_DELAY_MICROS)
     }
 
     fun stop() {
         sensorManager.unregisterListener(this)
+        smoothedSin = null
+        smoothedCos = null
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        when (event.sensor.type) {
-            Sensor.TYPE_ACCELEROMETER -> {
-                System.arraycopy(event.values, 0, gravity, 0, 3)
-                hasGravity = true
-            }
-            Sensor.TYPE_MAGNETIC_FIELD -> {
-                System.arraycopy(event.values, 0, geomagnetic, 0, 3)
-                hasGeomagnetic = true
-            }
+        if (event.sensor.type != Sensor.TYPE_ROTATION_VECTOR) return
+
+        SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
+        SensorManager.getOrientation(rotationMatrix, orientation)
+
+        // Азимут в радианах, -π..π, относительно магнитного севера
+        // (TYPE_ROTATION_VECTOR не корректирует склонение автоматически).
+        val azimuthRad = orientation[0]
+
+        val rawSin = sin(azimuthRad)
+        val rawCos = cos(azimuthRad)
+
+        val previousSin = smoothedSin
+        val previousCos = smoothedCos
+        val newSmoothedSin: Float
+        val newSmoothedCos: Float
+        if (previousSin == null || previousCos == null) {
+            // Первая выборка — без сглаживания, чтобы не стартовать с 0.
+            newSmoothedSin = rawSin.toFloat()
+            newSmoothedCos = rawCos.toFloat()
+        } else {
+            newSmoothedSin = EMA_OLD_WEIGHT * previousSin + EMA_NEW_WEIGHT * rawSin.toFloat()
+            newSmoothedCos = EMA_OLD_WEIGHT * previousCos + EMA_NEW_WEIGHT * rawCos.toFloat()
+        }
+        smoothedSin = newSmoothedSin
+        smoothedCos = newSmoothedCos
+
+        // Собираем угол обратно через atan2 — гарантирует кратчайший путь
+        // поворота даже в точке перехода через 0°/360°.
+        val smoothedAzimuthRad = atan2(newSmoothedSin, newSmoothedCos)
+        var magneticHeadingDeg = Math.toDegrees(smoothedAzimuthRad.toDouble()).toFloat()
+        magneticHeadingDeg = (magneticHeadingDeg + 360f) % 360f
+
+        val heading = if (northMode == NorthMode.TRUE) {
+            (magneticHeadingDeg + magneticDeclination + 360f) % 360f
+        } else {
+            magneticHeadingDeg
         }
 
-        if (hasGravity && hasGeomagnetic) {
-            val success = SensorManager.getRotationMatrix(rotationMatrix, null, gravity, geomagnetic)
-            if (success) {
-                SensorManager.getOrientation(rotationMatrix, orientation)
-                var magneticHeading = Math.toDegrees(orientation[0].toDouble()).toFloat()
-                magneticHeading = (magneticHeading + 360f) % 360f
-
-                val heading = if (northMode == NorthMode.TRUE) {
-                    (magneticHeading + magneticDeclination + 360f) % 360f
-                } else {
-                    magneticHeading
-                }
-
-                val smoothed = applySmoothing(heading)
-                smoothedHeading = smoothed
-                onHeadingChanged(smoothed)
-            }
-        }
-    }
-
-    /** Экспоненциальное сглаживание с корректной обработкой перехода через 0/360°. */
-    private fun applySmoothing(newHeading: Float): Float {
-        val previous = smoothedHeading ?: return newHeading
-
-        var delta = newHeading - previous
-        if (delta > 180f) delta -= 360f
-        if (delta < -180f) delta += 360f
-
-        return (previous + SMOOTHING_FACTOR * delta + 360f) % 360f
+        onHeadingChanged(heading)
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
     companion object {
-        private const val SENSOR_DELAY_MICROS = 50_000 // ~20 Гц
-        private const val SMOOTHING_FACTOR = 0.10f
+        // ~50 Гц — быстрее старого 20 Гц, т.к. TYPE_ROTATION_VECTOR даёт уже
+        // очищенные данные и не требует экономии на частоте опроса ради шумоподавления.
+        private const val SENSOR_DELAY_MICROS = 20_000
+
+        // EMA: 92% старого значения + 8% нового — плавное сглаживание без
+        // видимого дрожания от шума датчика, но с достаточно быстрой реакцией
+        // на реальный поворот телефона.
+        private const val EMA_OLD_WEIGHT = 0.92f
+        private const val EMA_NEW_WEIGHT = 0.08f
     }
 }
