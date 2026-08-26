@@ -38,6 +38,17 @@ class CompassSensorManager(
 
     var northMode: NorthMode = NorthMode.TRUE
 
+    /**
+     * Текущее магнитное склонение в градусах. Нужно снаружи, чтобы привести
+     * азимут на точку старта (Location.bearingTo всегда возвращает азимут
+     * относительно ИСТИННОГО севера) к той же системе отсчёта, что и текущий
+     * headingDegrees — иначе в магнитном режиме стрелка "домой" и циферблат
+     * будут рассинхронизированы на величину склонения (см. решение по багу
+     * "стрелка не указывает на место").
+     */
+    val currentDeclination: Float
+        get() = magneticDeclination
+
     /** Вызывать при получении текущей позиции — нужно для расчёта магнитного склонения. */
     fun updateLocationForDeclination(location: Location) {
         val field = GeomagneticField(

@@ -77,10 +77,12 @@ class MapViewModel(
         _activeEntryPoint.value = null
     }
 
-    /** Вызывается при возврате на карту — активная точка могла измениться
-     * в экране "Сохранённые точки входа". */
+    /** Вызывается при возврате на карту — активная точка и режим могли
+     * измениться в другом экране (например, выбор точки входа переводит
+     * в режим "Домой" — см. решение по ТЗ). */
     fun refreshActiveEntryPoint() {
         viewModelScope.launch {
+            _mode.value = stateStore.mode
             _activeEntryPoint.value = repository.getActiveEntryPoint()
         }
     }

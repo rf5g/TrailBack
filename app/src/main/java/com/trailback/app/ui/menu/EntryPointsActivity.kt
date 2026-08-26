@@ -2,8 +2,12 @@ package com.trailback.app.ui.menu
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.IBinder
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.Toast
@@ -18,6 +22,7 @@ import com.trailback.app.data.db.EntryPoint
 import com.trailback.app.data.repository.TrackingMode
 import com.trailback.app.databinding.ActivityEntryPointsBinding
 import com.trailback.app.databinding.ItemMenuRowBinding
+import com.trailback.app.service.TrackingService
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -25,6 +30,17 @@ import java.util.Locale
 class EntryPointsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityEntryPointsBinding
+    private var trackingService: TrackingService? = null
+    private var isServiceBound = false
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+            trackingService = (binder as TrackingService.LocalBinder).getService()
+        }
+        override fun onServiceDisconnected(name: ComponentName) {
+            trackingService = null
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,9 +65,28 @@ class EntryPointsActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        Intent(this, TrackingService::class.java).also { intent ->
+            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+            isServiceBound = true
+        }
+    }
+
+    override fun onStop() {
+        if (isServiceBound) {
+            unbindService(serviceConnection)
+            isServiceBound = false
+        }
+        super.onStop()
+    }
+
     /**
      * По тапу — диалог "Выбрать эту точку?". Смена активной точки
      * заблокирована, пока активен режим "Домой" (см. решение по ТЗ).
+     * При подтверждении выбора приложение сразу переходит в режим "Домой"
+     * на выбранную точку (прямая пунктирная линия — маршрутных данных
+     * может не быть в памяти устройства, это ожидаемо, см. решение по ТЗ).
      */
     private fun onEntryPointTapped(app: TrailBackApp, point: EntryPoint) {
         if (app.trackingStateStore.mode == TrackingMode.RETURNING) {
@@ -64,7 +99,10 @@ class EntryPointsActivity : AppCompatActivity() {
             .setPositiveButton(R.string.arrived_dialog_yes) { _, _ ->
                 lifecycleScope.launch {
                     app.trackingRepository.selectActiveEntryPoint(point.id)
+                    app.trackingRepository.enterReturningMode()
+                    trackingService?.updateMode(TrackingMode.RETURNING)
                     Toast.makeText(this@EntryPointsActivity, R.string.entry_point_set_active, Toast.LENGTH_SHORT).show()
+                    finish()
                 }
             }
             .setNegativeButton(R.string.arrived_dialog_no, null)

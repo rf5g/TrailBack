@@ -46,6 +46,7 @@ class MapActivity : AppCompatActivity() {
     private var isServiceBound = false
     private var lastKnownLocation: Location? = null
     private var currentHeading: Float = 0f
+    private var lastAppliedOfflineMapsUri: String? = null
 
     private val gnssStatusCallback = object : GnssStatus.Callback() {
         override fun onSatelliteStatusChanged(status: GnssStatus) {
@@ -91,7 +92,8 @@ class MapActivity : AppCompatActivity() {
         val app = application as TrailBackApp
         viewModel = ViewModelProvider(this, MapViewModel.Factory(app))[MapViewModel::class.java]
         mapController = MapController(this, binding.mapContainer)
-        mapController.setupMap(app.settingsStore.offlineMapsUri, hasInternetConnection())
+        lastAppliedOfflineMapsUri = app.settingsStore.offlineMapsUri
+        mapController.setupMap(lastAppliedOfflineMapsUri, hasInternetConnection())
 
         compassSensorManager = CompassSensorManager(this) { heading ->
             currentHeading = heading
@@ -130,6 +132,22 @@ class MapActivity : AppCompatActivity() {
         compassSensorManager.start()
         registerGnssStatusCallback()
         viewModel.refreshActiveEntryPoint()
+        reapplyOfflineMapIfChanged()
+    }
+
+    /**
+     * Раньше выбор офлайн-карты в настройках применялся только после полного
+     * перезапуска приложения — MapController.setupMap() вызывался лишь один
+     * раз в onCreate. Теперь при каждом возврате на экран карты сверяем,
+     * не изменился ли путь к офлайн-картам, и переинициализируем карту.
+     */
+    private fun reapplyOfflineMapIfChanged() {
+        val app = application as TrailBackApp
+        val currentUri = app.settingsStore.offlineMapsUri
+        if (currentUri != lastAppliedOfflineMapsUri) {
+            lastAppliedOfflineMapsUri = currentUri
+            mapController.setupMap(currentUri, hasInternetConnection())
+        }
     }
 
     override fun onPause() {

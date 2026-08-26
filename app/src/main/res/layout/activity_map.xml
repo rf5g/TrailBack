@@ -48,14 +48,13 @@
         app:layout_constraintTop_toBottomOf="@id/menuButton"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Центр экрана: масштаб + и - -->
+    <!-- Правый край, по центру вертикали: масштаб + и - (та же колонка, что меню/отметка) -->
     <ImageButton
         android:id="@+id/zoomInButton"
         style="@style/SquareIconButton"
         android:src="@drawable/ic_zoom_in"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/zoomOutButton"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintVertical_bias="0.5" />
 
@@ -65,7 +64,6 @@
         android:src="@drawable/ic_zoom_out"
         app:layout_constraintTop_toBottomOf="@id/zoomInButton"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintVertical_bias="0.5" />
 

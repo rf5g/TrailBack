@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.trailback.app.TrailBackApp
 import com.trailback.app.data.db.EntryPoint
+import com.trailback.app.data.repository.NorthMode
 import com.trailback.app.data.repository.TrackingMode
 import com.trailback.app.databinding.ActivityCompassBinding
 import com.trailback.app.service.TrackingService
@@ -111,12 +112,22 @@ class CompassActivity : AppCompatActivity() {
         val current = lastLocation ?: return
         val entryPoint = homeEntryPoint ?: return
 
-        val bearing = current.bearingTo(
+        val trueBearing = current.bearingTo(
             Location("home").apply {
                 latitude = entryPoint.latitude
                 longitude = entryPoint.longitude
             }
         )
-        binding.compassView.bearingToHomeDegrees = (bearing + 360f) % 360f
+        // Location.bearingTo() всегда относительно истинного севера. Если
+        // циферблат сейчас в режиме "магнитный север", приводим азимут к той
+        // же системе отсчёта — иначе стрелка и циферблат рассинхронизированы
+        // на величину магнитного склонения.
+        val app = application as TrailBackApp
+        val adjustedBearing = if (app.settingsStore.northMode == NorthMode.MAGNETIC) {
+            trueBearing - sensorManager.currentDeclination
+        } else {
+            trueBearing
+        }
+        binding.compassView.bearingToHomeDegrees = (adjustedBearing + 360f) % 360f
     }
 }

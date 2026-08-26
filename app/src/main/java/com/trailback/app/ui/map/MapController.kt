@@ -59,6 +59,24 @@ class MapController(
     }
 
     fun setupMap(offlineMapsUri: String?, hasInternet: Boolean) {
+        // Уничтожаем предыдущий MapView (если это переинициализация после смены
+        // офлайн-карты в настройках, см. решение по ТЗ — раньше карта менялась
+        // только после полного перезапуска приложения) и сбрасываем ссылки на
+        // маркеры/линии, привязанные к старому (уже уничтоженному) MapView —
+        // иначе updateTrackLine/updateHomeLine/updateUserPositionMarker будут
+        // молча падать на несуществующие layers старой карты.
+        tileRendererLayer?.let { it.mapDataStore.close() }
+        tileDownloadLayer?.onDestroy()
+        mapView?.destroyAll()
+        mapView = null
+        tileRendererLayer = null
+        tileDownloadLayer = null
+        trackPolyline = null
+        homeLinePolyline = null
+        userPositionMarker = null
+        markedPlaceMarkers.clear()
+        lastMarkerHeading = null
+
         container.removeAllViews()
 
         val mapFile = offlineMapsUri?.let { resolveFirstMapFile(it) }
@@ -279,26 +297,63 @@ class MapController(
         return mapsforgeBitmap
     }
 
-    /** Булавка на карте для каждого отмеченного места. */
+    /** Булавка с подписью названия сверху для каждого отмеченного места. */
     fun updateMarkedPlaces(places: List<MarkedPlace>) {
         val mapView = this.mapView ?: return
         markedPlaceMarkers.forEach { mapView.layerManager.layers.remove(it) }
         markedPlaceMarkers.clear()
 
-        if (places.isEmpty()) return
-
-        val drawable = ContextCompat.getDrawable(context, R.drawable.ic_marked_place_pin) ?: return
         places.forEach { place ->
-            val bitmap = AndroidGraphicFactory.convertToBitmap(drawable)
+            val bitmap = createLabeledPinBitmap(place.name)
             bitmap.incrementRefCount()
-            // Вертикальный офсет: булавка "стоит" острием на координате, поэтому
-            // сдвигаем её вверх на половину высоты.
+            // Вертикальный офсет: острие булавки должно "стоять" на координате,
+            // а не центр всего составного битмапа (текст+булавка) — сдвигаем
+            // вверх на половину общей высоты композиции.
             val marker = Marker(
                 LatLong(place.latitude, place.longitude), bitmap, 0, -bitmap.height / 2
             )
             mapView.layerManager.layers.add(marker)
             markedPlaceMarkers.add(marker)
         }
+    }
+
+    /** Рисует название места текстом сверху и булавку снизу в одном битмапе. */
+    private fun createLabeledPinBitmap(name: String): org.mapsforge.core.graphics.Bitmap {
+        val pinDrawable = ContextCompat.getDrawable(context, R.drawable.ic_marked_place_pin)
+        val pinSizePx = (36 * density).toInt()
+
+        val textPaint = android.graphics.Paint().apply {
+            isAntiAlias = true
+            color = android.graphics.Color.WHITE
+            textSize = 13f * density
+            textAlign = android.graphics.Paint.Align.CENTER
+            setShadowLayer(3f * density, 0f, 0f, android.graphics.Color.BLACK)
+        }
+
+        val textWidth = textPaint.measureText(name)
+        val horizontalPadding = 8f * density
+        val canvasWidth = maxOf(pinSizePx.toFloat(), textWidth + horizontalPadding * 2).toInt()
+
+        val textMetrics = textPaint.fontMetrics
+        val textHeight = (textMetrics.descent - textMetrics.ascent)
+        val textGap = 2f * density
+        val totalHeight = (textHeight + textGap + pinSizePx).toInt()
+
+        val androidBitmap = AndroidBitmapType.createBitmap(canvasWidth, totalHeight, AndroidBitmapType.Config.ARGB_8888)
+        val canvas = AndroidCanvasType(androidBitmap)
+
+        canvas.drawText(name, canvasWidth / 2f, -textMetrics.ascent, textPaint)
+
+        val pinLeft = (canvasWidth - pinSizePx) / 2
+        val pinTop = (textHeight + textGap).toInt()
+        pinDrawable?.setBounds(pinLeft, pinTop, pinLeft + pinSizePx, pinTop + pinSizePx)
+        pinDrawable?.draw(canvas)
+
+        val mapsforgeBitmap = AndroidGraphicFactory.INSTANCE.createBitmap(canvasWidth, totalHeight, true)
+        val targetAndroidBitmap = AndroidGraphicFactory.getBitmap(mapsforgeBitmap)
+        AndroidCanvasType(targetAndroidBitmap).drawBitmap(androidBitmap, 0f, 0f, null)
+        androidBitmap.recycle()
+        return mapsforgeBitmap
     }
 
     fun canZoomIn(): Boolean {
