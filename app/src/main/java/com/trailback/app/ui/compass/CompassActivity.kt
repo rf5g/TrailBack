@@ -16,6 +16,9 @@ import com.trailback.app.data.repository.TrackingMode
 import com.trailback.app.databinding.ActivityCompassBinding
 import com.trailback.app.service.TrackingService
 import kotlinx.coroutines.launch
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 
 class CompassActivity : AppCompatActivity() {
 
@@ -25,12 +28,18 @@ class CompassActivity : AppCompatActivity() {
     private var isServiceBound = false
 
     // Кэшируется один раз при входе в режим "Домой", чтобы пересчёт азимута
-    // на каждый тик компаса (20 Гц) не требовал обращения к БД — раньше
-    // запрос к БД на каждый location-тик мог не успевать/сбоить, из-за чего
-    // bearingToHomeDegrees оставался равен 0 и красная стрелка визуально
-    // "прилипала" к циферблату (формула поворота совпадала с поворотом диска).
+    // на каждый тик компаса не требовал обращения к БД.
     private var homeEntryPoint: EntryPoint? = null
     private var lastLocation: Location? = null
+    private var currentHeadingDegrees: Float = 0f
+
+    // Повторное EMA-сглаживание ИТОГОВОГО угла стрелки (азимут минус курс).
+    // Нужно отдельно от сглаживания курса в CompassSensorManager: GPS-азимут
+    // на точку старта приходит рывками (координаты "прилетают" пакетами), и
+    // разностный угол (bearing - heading) может заново давать скачок через
+    // 0°/360°, даже если сам курс телефона уже сглажен.
+    private var smoothedArrowSin: Float? = null
+    private var smoothedArrowCos: Float? = null
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
@@ -55,15 +64,16 @@ class CompassActivity : AppCompatActivity() {
         if (isReturning) {
             lifecycleScope.launch {
                 homeEntryPoint = app.trackingRepository.getActiveEntryPoint()
-                recomputeBearing()
+                recomputeArrow()
             }
         }
 
         sensorManager = CompassSensorManager(this) { heading ->
+            currentHeadingDegrees = heading
             binding.compassView.headingDegrees = heading
-            // Пересчитываем на каждый тик компаса (не только на редкие location-апдейты),
-            // чтобы стрелка визуально реагировала мгновенно и не выглядела "залипшей".
-            recomputeBearing()
+            // Пересчитываем на каждый тик компаса (не только на редкие
+            // location-апдейты), чтобы стрелка визуально реагировала мгновенно.
+            recomputeArrow()
         }
         sensorManager.northMode = app.settingsStore.northMode
     }
@@ -91,6 +101,8 @@ class CompassActivity : AppCompatActivity() {
 
     override fun onPause() {
         sensorManager.stop()
+        smoothedArrowSin = null
+        smoothedArrowCos = null
         super.onPause()
     }
 
@@ -100,14 +112,19 @@ class CompassActivity : AppCompatActivity() {
                 if (location != null) {
                     lastLocation = location
                     sensorManager.updateLocationForDeclination(location)
-                    recomputeBearing()
+                    recomputeArrow()
                 }
             }
         }
     }
 
-    /** Чистая геометрия, без обращений к БД — можно вызывать на каждый тик датчика. */
-    private fun recomputeBearing() {
+    /**
+     * Считает финальный угол стрелки: азимут на точку старта (в системе
+     * отсчёта, соответствующей текущему режиму компаса) минус курс телефона,
+     * затем повторно сглаживает результат через sin/cos, чтобы убрать рывки
+     * от GPS-джиттера и переход через 0°/360° уже в разностном угле.
+     */
+    private fun recomputeArrow() {
         if (binding.compassView.mode != CompassView.Mode.RETURNING) return
         val current = lastLocation ?: return
         val entryPoint = homeEntryPoint ?: return
@@ -128,6 +145,39 @@ class CompassActivity : AppCompatActivity() {
         } else {
             trueBearing
         }
-        binding.compassView.bearingToHomeDegrees = (adjustedBearing + 360f) % 360f
+        val bearingDeg = (adjustedBearing + 360f) % 360f
+
+        val rawArrowAngleDeg = (bearingDeg - currentHeadingDegrees + 360f) % 360f
+        val rawArrowAngleRad = Math.toRadians(rawArrowAngleDeg.toDouble())
+
+        val rawSin = sin(rawArrowAngleRad).toFloat()
+        val rawCos = cos(rawArrowAngleRad).toFloat()
+
+        val previousSin = smoothedArrowSin
+        val previousCos = smoothedArrowCos
+        val newSin: Float
+        val newCos: Float
+        if (previousSin == null || previousCos == null) {
+            newSin = rawSin
+            newCos = rawCos
+        } else {
+            newSin = EMA_OLD_WEIGHT * previousSin + EMA_NEW_WEIGHT * rawSin
+            newCos = EMA_OLD_WEIGHT * previousCos + EMA_NEW_WEIGHT * rawCos
+        }
+        smoothedArrowSin = newSin
+        smoothedArrowCos = newCos
+
+        val smoothedArrowRad = atan2(newSin, newCos)
+        var smoothedArrowDeg = Math.toDegrees(smoothedArrowRad.toDouble()).toFloat()
+        smoothedArrowDeg = (smoothedArrowDeg + 360f) % 360f
+
+        binding.compassView.arrowScreenAngleDegrees = smoothedArrowDeg
+    }
+
+    companion object {
+        // Те же веса, что и для сглаживания курса в CompassSensorManager —
+        // единообразное поведение для обоих слоёв сглаживания.
+        private const val EMA_OLD_WEIGHT = 0.92f
+        private const val EMA_NEW_WEIGHT = 0.08f
     }
 }

@@ -31,8 +31,12 @@ class CompassView @JvmOverloads constructor(
     var headingDegrees: Float = 0f
         set(value) { field = value; invalidate() }
 
-    /** Азимут на точку старта, градусы 0..360 (актуально только в режиме RETURNING). */
-    var bearingToHomeDegrees: Float = 0f
+    /**
+     * Финальный угол поворота стрелки на экране (уже с учётом курса и
+     * повторного сглаживания перехода через 0°/360° — см. CompassActivity).
+     * Актуально только в режиме RETURNING.
+     */
+    var arrowScreenAngleDegrees: Float = 0f
         set(value) { field = value; invalidate() }
 
     private val isRussian = context.resources.configuration.locales[0].language == "ru"
@@ -140,9 +144,8 @@ class CompassView @JvmOverloads constructor(
     }
 
     private fun drawHomeArrow(canvas: Canvas, cx: Float, cy: Float, radius: Float) {
-        val arrowRotation = bearingToHomeDegrees - headingDegrees
         canvas.save()
-        canvas.rotate(arrowRotation, cx, cy)
+        canvas.rotate(arrowScreenAngleDegrees, cx, cy)
 
         val length = radius * 0.75f
         val width = radius * 0.35f
