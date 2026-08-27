@@ -48,11 +48,15 @@ class MapController(
     private var trackPolyline: Polyline? = null
     private var homeLinePolyline: Polyline? = null
     private var userPositionMarker: Marker? = null
+    private var entryPointMarker: Marker? = null
     private val markedPlaceMarkers = mutableListOf<Marker>()
 
     private var lastMarkerHeading: Float? = null
     private val density = context.resources.displayMetrics.density
     private val markerSizePx: Int = (MARKER_SIZE_DP * density).toInt()
+    private val entryPointDateFormat = java.text.SimpleDateFormat(
+        "dd.MMM. H:mm", java.util.Locale.getDefault()
+    )
 
     init {
         AndroidGraphicFactory.createInstance(context.applicationContext as android.app.Application)
@@ -74,6 +78,7 @@ class MapController(
         trackPolyline = null
         homeLinePolyline = null
         userPositionMarker = null
+        entryPointMarker = null
         markedPlaceMarkers.clear()
         lastMarkerHeading = null
 
@@ -303,8 +308,9 @@ class MapController(
         markedPlaceMarkers.forEach { mapView.layerManager.layers.remove(it) }
         markedPlaceMarkers.clear()
 
+        val pinSizePx = (36 * density).toInt()
         places.forEach { place ->
-            val bitmap = createLabeledPinBitmap(place.name)
+            val bitmap = createLabeledIconBitmap(R.drawable.ic_marked_place_pin, pinSizePx, place.name)
             bitmap.incrementRefCount()
             // Вертикальный офсет: острие булавки должно "стоять" на координате,
             // а не центр всего составного битмапа (текст+булавка) — сдвигаем
@@ -317,10 +323,32 @@ class MapController(
         }
     }
 
-    /** Рисует название места текстом сверху и булавку снизу в одном битмапе. */
-    private fun createLabeledPinBitmap(name: String): org.mapsforge.core.graphics.Bitmap {
-        val pinDrawable = ContextCompat.getDrawable(context, R.drawable.ic_marked_place_pin)
-        val pinSizePx = (36 * density).toInt()
+    /**
+     * Векторный читаемый крестик на точке входа с подписью даты создания
+     * (например "27.авг. 7:40") — см. решение по ТЗ.
+     */
+    fun updateEntryPointMarker(entryPoint: EntryPoint?) {
+        val mapView = this.mapView ?: return
+        entryPointMarker?.let { mapView.layerManager.layers.remove(it) }
+        entryPointMarker = null
+
+        if (entryPoint == null) return
+
+        val dateLabel = entryPointDateFormat.format(java.util.Date(entryPoint.timestamp))
+        val crossSizePx = (32 * density).toInt()
+        val bitmap = createLabeledIconBitmap(R.drawable.ic_entry_point_marker, crossSizePx, dateLabel)
+        bitmap.incrementRefCount()
+
+        val marker = Marker(
+            LatLong(entryPoint.latitude, entryPoint.longitude), bitmap, 0, -bitmap.height / 2
+        )
+        mapView.layerManager.layers.add(marker)
+        entryPointMarker = marker
+    }
+
+    /** Рисует подпись текстом сверху и значок снизу в одном битмапе. */
+    private fun createLabeledIconBitmap(iconRes: Int, iconSizePx: Int, label: String): org.mapsforge.core.graphics.Bitmap {
+        val iconDrawable = ContextCompat.getDrawable(context, iconRes)
 
         val textPaint = android.graphics.Paint().apply {
             isAntiAlias = true
@@ -330,24 +358,24 @@ class MapController(
             setShadowLayer(3f * density, 0f, 0f, android.graphics.Color.BLACK)
         }
 
-        val textWidth = textPaint.measureText(name)
+        val textWidth = textPaint.measureText(label)
         val horizontalPadding = 8f * density
-        val canvasWidth = maxOf(pinSizePx.toFloat(), textWidth + horizontalPadding * 2).toInt()
+        val canvasWidth = maxOf(iconSizePx.toFloat(), textWidth + horizontalPadding * 2).toInt()
 
         val textMetrics = textPaint.fontMetrics
         val textHeight = (textMetrics.descent - textMetrics.ascent)
         val textGap = 2f * density
-        val totalHeight = (textHeight + textGap + pinSizePx).toInt()
+        val totalHeight = (textHeight + textGap + iconSizePx).toInt()
 
         val androidBitmap = AndroidBitmapType.createBitmap(canvasWidth, totalHeight, AndroidBitmapType.Config.ARGB_8888)
         val canvas = AndroidCanvasType(androidBitmap)
 
-        canvas.drawText(name, canvasWidth / 2f, -textMetrics.ascent, textPaint)
+        canvas.drawText(label, canvasWidth / 2f, -textMetrics.ascent, textPaint)
 
-        val pinLeft = (canvasWidth - pinSizePx) / 2
-        val pinTop = (textHeight + textGap).toInt()
-        pinDrawable?.setBounds(pinLeft, pinTop, pinLeft + pinSizePx, pinTop + pinSizePx)
-        pinDrawable?.draw(canvas)
+        val iconLeft = (canvasWidth - iconSizePx) / 2
+        val iconTop = (textHeight + textGap).toInt()
+        iconDrawable?.setBounds(iconLeft, iconTop, iconLeft + iconSizePx, iconTop + iconSizePx)
+        iconDrawable?.draw(canvas)
 
         val mapsforgeBitmap = AndroidGraphicFactory.INSTANCE.createBitmap(canvasWidth, totalHeight, true)
         val targetAndroidBitmap = AndroidGraphicFactory.getBitmap(mapsforgeBitmap)

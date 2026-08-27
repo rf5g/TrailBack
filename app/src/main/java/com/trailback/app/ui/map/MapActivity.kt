@@ -28,6 +28,8 @@ import com.trailback.app.service.TrackingService
 import com.trailback.app.ui.compass.CompassActivity
 import com.trailback.app.ui.compass.CompassSensorManager
 import com.trailback.app.ui.menu.MenuActivity
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -219,6 +221,20 @@ class MapActivity : AppCompatActivity() {
             )
             binding.topInfoPanel.distanceToHomeText.text =
                 getString(R.string.distance_to_home_label) + ": " + formatDistance(distanceResult[0])
+        } else {
+            // Нет активной точки (например, после "Я на месте") — поле
+            // должно быть пустым, а не показывать последнее значение (п.1).
+            binding.topInfoPanel.distanceToHomeText.text = ""
+        }
+
+        // Счётчик пути (п.6): TrackingService копит дистанцию в
+        // TrackingStateStore напрямую (не через ViewModel), поэтому UI
+        // синхронизируется с реальным значением на каждый тик геопозиции,
+        // а не полагается только на разовые сбросы во ViewModel.
+        if (viewModel.mode.value == TrackingMode.RECORDING) {
+            val app = application as TrailBackApp
+            binding.topInfoPanel.distanceTraveledText.text =
+                getString(R.string.distance_traveled_label) + ": " + formatDistance(app.trackingStateStore.distanceMeters)
         }
     }
 
@@ -323,12 +339,8 @@ class MapActivity : AppCompatActivity() {
                 TrackingMode.IDLE -> confirmStart()
                 TrackingMode.RECORDING -> confirmStop()
                 TrackingMode.STOPPED -> confirmHome()
-                TrackingMode.RETURNING -> Unit // основное действие в этом режиме — диалог прибытия, не кнопка
+                TrackingMode.RETURNING -> confirmManualArrival()
             }
-        }
-
-        binding.manualArrivalButton.setOnClickListener {
-            trackingService?.triggerManualArrivalCheck()
         }
 
         binding.quickMarkButton.setOnClickListener {
@@ -384,6 +396,33 @@ class MapActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * Ручное подтверждение через объединённую кнопку (п.3): два РАЗНЫХ
+     * диалога подряд, а не троекратное повторение одного и того же — сперва
+     * обычное подтверждение прибытия, затем отдельное предупреждение о
+     * сбросе режима возврата (п.4).
+     */
+    private fun confirmManualArrival() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.arrived_dialog_title)
+            .setMessage(R.string.arrived_dialog_message)
+            .setPositiveButton(R.string.arrived_dialog_yes) { _, _ -> confirmManualArrivalReset() }
+            .setNegativeButton(R.string.arrived_dialog_no, null)
+            .show()
+    }
+
+    private fun confirmManualArrivalReset() {
+        AlertDialog.Builder(this)
+            .setMessage(R.string.manual_arrival_reset_confirm_message)
+            .setPositiveButton(R.string.arrived_dialog_yes) { _, _ ->
+                viewModel.onArrivedConfirmed()
+                trackingService?.onArrivalDialogDismissed(confirmed = true)
+                trackingService?.updateMode(TrackingMode.IDLE)
+            }
+            .setNegativeButton(R.string.arrived_dialog_no, null)
+            .show()
+    }
+
     private fun showArrivedDialog() {
         AlertDialog.Builder(this)
             .setTitle(R.string.arrived_dialog_title)
@@ -430,8 +469,6 @@ class MapActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.mode.collect { mode ->
                 updateButtonForMode(mode)
-                binding.manualArrivalButton.visibility =
-                    if (mode == TrackingMode.RETURNING) android.view.View.VISIBLE else android.view.View.GONE
             }
         }
         lifecycleScope.launch {
@@ -442,15 +479,30 @@ class MapActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             viewModel.activeEntryPoint.collect { entryPoint ->
-                if (entryPoint == null) {
-                    mapController.updateTrackLine(emptyList(), viewModel.mode.value)
-                    return@collect
+                mapController.updateEntryPointMarker(entryPoint)
+            }
+        }
+        lifecycleScope.launch {
+            // ВАЖНО: flatMapLatest, а не вложенный .collect { ... .collect {} }.
+            // Вложенный collect блокировал внешний поток навсегда на первой
+            // же точке входа — при повторной записи маршрута (новая точка
+            // входа после "Я на месте") внешний коллектор не мог "дойти" до
+            // новой подписки, поэтому трек переставал обновляться до полного
+            // перезапуска приложения (см. решение по багу — п.5).
+            // flatMapLatest сам отменяет предыдущую внутреннюю подписку при
+            // каждой новой активной точке входа.
+            viewModel.activeEntryPoint
+                .flatMapLatest { entryPoint ->
+                    if (entryPoint == null) {
+                        flowOf(emptyList())
+                    } else {
+                        val app = application as TrailBackApp
+                        app.trackingRepository.observeTrackForEntryPoint(entryPoint.id)
+                    }
                 }
-                val app = application as TrailBackApp
-                app.trackingRepository.observeTrackForEntryPoint(entryPoint.id).collect { points ->
+                .collect { points ->
                     mapController.updateTrackLine(points, viewModel.mode.value)
                 }
-            }
         }
         lifecycleScope.launch {
             val app = application as TrailBackApp
@@ -464,7 +516,8 @@ class MapActivity : AppCompatActivity() {
         binding.mainActionButton.text = when (mode) {
             TrackingMode.IDLE -> getString(R.string.button_start)
             TrackingMode.RECORDING -> getString(R.string.button_stop)
-            TrackingMode.STOPPED, TrackingMode.RETURNING -> getString(R.string.button_home)
+            TrackingMode.STOPPED -> getString(R.string.button_home)
+            TrackingMode.RETURNING -> getString(R.string.manual_arrival_button)
         }
     }
 

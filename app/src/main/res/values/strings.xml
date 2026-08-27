@@ -73,4 +73,6 @@
     <string name="menu_exit">Exit</string>
     <string name="exit_confirm_message">Are you sure you want to exit the app?</string>
     <string name="exit_locked_in_returning">Cannot exit the app while "Home" mode is active</string>
+
+    <string name="manual_arrival_reset_confirm_message">Are you sure? Return mode to the starting point will be reset!</string>
 </resources>

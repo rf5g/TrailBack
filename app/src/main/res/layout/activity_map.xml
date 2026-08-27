@@ -67,26 +67,15 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintVertical_bias="0.5" />
 
-    <!-- Ручная кнопка "Я на месте" — видима только в режиме "Домой" -->
-    <Button
-        android:id="@+id/manualArrivalButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/manual_arrival_button"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/mainActionButton"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp" />
-
     <!-- Кнопка центрирования: ближе к правому нижнему углу, но выше главной кнопки -->
     <ImageButton
         android:id="@+id/recenterButton"
         style="@style/SquareIconButton"
         android:src="@drawable/ic_recenter"
-        app:layout_constraintBottom_toTopOf="@id/manualArrivalButton"
+        app:layout_constraintBottom_toTopOf="@id/mainActionButton"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Главная кнопка — без изменений -->
+    <!-- Главная кнопка — теперь включает и роль "Я на месте" в режиме "Домой" -->
     <Button
         android:id="@+id/mainActionButton"
         style="@style/MainActionButton"

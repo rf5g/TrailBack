@@ -69,4 +69,6 @@
     <string name="menu_exit">Выход</string>
     <string name="exit_confirm_message">Вы уверены, что хотите выйти из приложения?</string>
     <string name="exit_locked_in_returning">Нельзя выйти из приложения в активном режиме "Домой"</string>
+
+    <string name="manual_arrival_reset_confirm_message">Вы уверены? Режим возврата на начальную точку будет сброшен!</string>
 </resources>
