@@ -225,6 +225,12 @@ class MapController(
      * ВАЖНО: без явного paint.setStyle(Style.STROKE) полилиния не рисуется —
      * дефолтный стиль Mapsforge Paint это FILL (это и было причиной бага
      * "трек не виден").
+     *
+     * Сглаживание острых углов: у Mapsforge НЕТ готового флага/параметра для
+     * сглаживания полилиний — Polyline.draw() строит путь только прямыми
+     * сегментами (moveTo/lineTo). Сглаживание реализовано отдельно —
+     * интерполяцией Catmull-Rom по исходным GPS-точкам перед тем, как
+     * передать координаты в обычный Polyline. Сам Mapsforge не тронут.
      */
     fun updateTrackLine(points: List<TrackPoint>, mode: TrackingMode) {
         val mapView = this.mapView ?: return
@@ -238,10 +244,56 @@ class MapController(
             strokeWidth = 4f * density
         }
         val polyline = Polyline(paintStroke, AndroidGraphicFactory.INSTANCE)
-        points.forEach { polyline.latLongs.add(LatLong(it.latitude, it.longitude)) }
+        val rawLatLongs = points.map { LatLong(it.latitude, it.longitude) }
+        smoothTrackPoints(rawLatLongs).forEach { polyline.latLongs.add(it) }
 
         mapView.layerManager.layers.add(polyline)
         trackPolyline = polyline
+    }
+
+    /**
+     * Сглаживание Catmull-Rom: между каждой парой реальных точек вставляет
+     * несколько промежуточных, рассчитанных по кривой через 4 соседние
+     * точки — визуально убирает резкие "изломы" на поворотах трека без
+     * искажения самого маршрута (кривая проходит ровно через все исходные
+     * точки, ничего не "срезает").
+     */
+    private fun smoothTrackPoints(points: List<LatLong>): List<LatLong> {
+        if (points.size < 3) return points
+
+        val padded = listOf(points.first()) + points + listOf(points.last())
+        val result = mutableListOf<LatLong>()
+
+        for (i in 0 until padded.size - 3) {
+            val p0 = padded[i]
+            val p1 = padded[i + 1]
+            val p2 = padded[i + 2]
+            val p3 = padded[i + 3]
+            for (step in 0 until SMOOTHING_SEGMENTS) {
+                val t = step / SMOOTHING_SEGMENTS.toFloat()
+                result.add(catmullRomPoint(p0, p1, p2, p3, t))
+            }
+        }
+        result.add(points.last())
+        return result
+    }
+
+    private fun catmullRomPoint(p0: LatLong, p1: LatLong, p2: LatLong, p3: LatLong, t: Float): LatLong {
+        val t2 = t * t
+        val t3 = t2 * t
+
+        fun interpolate(v0: Double, v1: Double, v2: Double, v3: Double): Double {
+            return 0.5 * (
+                (2 * v1) +
+                (-v0 + v2) * t +
+                (2 * v0 - 5 * v1 + 4 * v2 - v3) * t2 +
+                (-v0 + 3 * v1 - 3 * v2 + v3) * t3
+            )
+        }
+
+        val lat = interpolate(p0.latitude, p1.latitude, p2.latitude, p3.latitude)
+        val lon = interpolate(p0.longitude, p1.longitude, p2.longitude, p3.longitude)
+        return LatLong(lat, lon)
     }
 
     /**
@@ -456,6 +508,12 @@ class MapController(
         private const val ACCENT_COLOR_MAPSFORGE = 0xFFE65100.toInt()
 
         private const val ZOOM_LEVEL_MIN: Byte = 2
+
+        // Сколько промежуточных точек генерируется на один отрезок трека при
+        // сглаживании Catmull-Rom. Больше — плавнее кривая, но больше точек
+        // на длинных маршрутах (влияет на нагрузку перерисовки при частых
+        // обновлениях во время активной записи).
+        private const val SMOOTHING_SEGMENTS = 6
         private const val ZOOM_LEVEL_MAX: Byte = 20
         private const val ZOOM_LEVEL_MAX_ONLINE: Byte = 18
         private const val DEFAULT_ZOOM_LEVEL: Byte = 15

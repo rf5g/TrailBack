@@ -54,7 +54,13 @@ class MenuActivity : AppCompatActivity() {
         binding.menuList.adapter = MenuAdapter(items)
     }
 
-    /** Выход заблокирован в активном режиме "Домой" (см. решение по ТЗ). */
+    /**
+     * Выход заблокирован в активном режиме "Домой" (см. решение по ТЗ).
+     * По подтверждению — полное завершение: останавливаем фоновый сервис
+     * (иначе процесс жил бы дальше как foreground-сервис даже после
+     * закрытия всех экранов) и убиваем сам процесс приложения, а не просто
+     * закрываем видимые Activity (finishAffinity() оставил бы сервис живым).
+     */
     private fun onExitTapped() {
         val app = application as TrailBackApp
         if (app.trackingStateStore.mode == TrackingMode.RETURNING) {
@@ -64,7 +70,9 @@ class MenuActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setMessage(com.trailback.app.R.string.exit_confirm_message)
             .setPositiveButton(com.trailback.app.R.string.arrived_dialog_yes) { _, _ ->
+                stopService(Intent(this, com.trailback.app.service.TrackingService::class.java))
                 finishAffinity()
+                android.os.Process.killProcess(android.os.Process.myPid())
             }
             .setNegativeButton(com.trailback.app.R.string.arrived_dialog_no, null)
             .show()

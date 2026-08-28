@@ -13,6 +13,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.trailback.app.R
 import com.trailback.app.TrailBackApp
 import com.trailback.app.data.repository.TrackingMode
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,11 +65,7 @@ class TrackingService : LifecycleService() {
         val mode = app.trackingStateStore.mode
 
         val notification = notificationHelper.buildForegroundNotification(
-            contentText = when (mode) {
-                TrackingMode.RECORDING -> getString(com.trailback.app.R.string.tracking_notification_recording)
-                TrackingMode.RETURNING -> getString(com.trailback.app.R.string.tracking_notification_returning)
-                TrackingMode.STOPPED, TrackingMode.IDLE -> getString(com.trailback.app.R.string.tracking_notification_idle)
-            }
+            contentText = statusTextForMode(mode)
         )
         ServiceCompat.startForeground(
             this,
@@ -89,12 +86,15 @@ class TrackingService : LifecycleService() {
     fun updateMode(mode: TrackingMode) {
         if (mode == TrackingMode.RETURNING) {
             arrivalDetector.reset()
-            notificationHelper.notifyReturningStarted()
         }
-        if (mode == TrackingMode.STOPPED) {
-            notificationHelper.notifyStopped()
-        }
+        notificationHelper.updateForegroundStatus(statusTextForMode(mode))
         startLocationUpdates(mode)
+    }
+
+    private fun statusTextForMode(mode: TrackingMode): String = when (mode) {
+        TrackingMode.RECORDING -> getString(R.string.tracking_notification_recording)
+        TrackingMode.RETURNING -> getString(R.string.tracking_notification_returning)
+        TrackingMode.STOPPED, TrackingMode.IDLE -> getString(R.string.tracking_notification_idle)
     }
 
     fun triggerManualArrivalCheck() {

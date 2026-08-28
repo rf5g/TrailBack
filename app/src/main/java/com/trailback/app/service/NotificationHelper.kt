@@ -11,12 +11,14 @@ import com.trailback.app.R
 import com.trailback.app.ui.map.MapActivity
 
 /**
- * Уведомления по п.9 ТЗ:
- * - при "Старт" уведомление не нужно (только foreground-уведомление сервиса
- *   для соответствия требованиям Android, без доп. акцента);
- * - при "Стоп" и при входе в режим "Домой" — обязательное информационное уведомление;
- * - "Вы вернулись!" — уведомление, если приложение свёрнуто (если открыто — диалог
- *   показывает Activity напрямую, см. HomeArrivalController).
+ * Уведомления (пересмотрено по решению — не заваливать пользователя
+ * отдельными всплывающими уведомлениями на каждое действие):
+ * - "Старт"/"Стоп"/"Домой" НЕ создают отдельных уведомлений — вместо этого
+ *   обновляется текст ОДНОГО постоянного foreground-уведомления сервиса
+ *   (см. updateForegroundStatus) — статус виден в шторке всегда, без спама;
+ * - "Вы вернулись!" — единственное настоящее push-уведомление, потому что
+ *   это редкое, важное и требующее действия событие (актуально, только
+ *   если приложение свёрнуто — если открыто, диалог показывает сама Activity).
  */
 class NotificationHelper(private val context: Context) {
 
@@ -57,20 +59,14 @@ class NotificationHelper(private val context: Context) {
             .build()
     }
 
-    fun notifyStopped() {
-        show(
-            id = ID_STOPPED,
-            title = context.getString(R.string.notification_stopped_title),
-            text = context.getString(R.string.notification_stopped_text)
-        )
-    }
-
-    fun notifyReturningStarted() {
-        show(
-            id = ID_RETURNING,
-            title = context.getString(R.string.notification_returning_title),
-            text = context.getString(R.string.notification_returning_text)
-        )
+    /**
+     * Обновляет текст уже показанного постоянного уведомления (та же
+     * ID = FOREGROUND_NOTIFICATION_ID) — пользователь видит смену статуса
+     * ("Идёт запись маршрута" → "Возврат к точке старта" → "Готово") прямо
+     * в существующей строке шторки, без новых всплывающих сообщений.
+     */
+    fun updateForegroundStatus(contentText: String) {
+        manager.notify(FOREGROUND_NOTIFICATION_ID, buildForegroundNotification(contentText))
     }
 
     /** Показывается, только если приложение свёрнуто — тап открывает диалог подтверждения. */
@@ -93,23 +89,11 @@ class NotificationHelper(private val context: Context) {
         manager.notify(ID_ARRIVED, notification)
     }
 
-    private fun show(id: Int, title: String, text: String) {
-        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
-            .setSmallIcon(R.drawable.ic_notification_tracking)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setAutoCancel(true)
-            .build()
-        manager.notify(id, notification)
-    }
-
     companion object {
         const val CHANNEL_TRACKING = "tracking_channel"
         const val CHANNEL_ALERTS = "alerts_channel"
         const val FOREGROUND_NOTIFICATION_ID = 1001
 
-        private const val ID_STOPPED = 1002
-        private const val ID_RETURNING = 1003
         private const val ID_ARRIVED = 1004
     }
 }
