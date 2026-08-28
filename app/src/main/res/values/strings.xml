@@ -9,6 +9,8 @@
     <string name="button_home">HOME</string>
     <string name="distance_traveled_label">Distance</string>
     <string name="distance_to_home_label">To start</string>
+    <string name="label_route_counter">Route counter</string>
+    <string name="label_distance_to_destination">To destination</string>
     <string name="satellites_label">Satellites GPS: %1$d   GLONASS: %2$d</string>
     <string name="low_accuracy_warning">Satellite accuracy is low (&gt;50 m). Continue?</string>
     <string name="confirm_start_title">Start recording?</string>

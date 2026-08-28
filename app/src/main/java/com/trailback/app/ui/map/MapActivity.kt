@@ -49,6 +49,7 @@ class MapActivity : AppCompatActivity() {
     private var lastKnownLocation: Location? = null
     private var currentHeading: Float = 0f
     private var lastAppliedOfflineMapsUri: String? = null
+    private var serviceObserverJob: kotlinx.coroutines.Job? = null
 
     private val gnssStatusCallback = object : GnssStatus.Callback() {
         override fun onSatelliteStatusChanged(status: GnssStatus) {
@@ -172,6 +173,8 @@ class MapActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        serviceObserverJob?.cancel()
+        serviceObserverJob = null
         if (isServiceBound) {
             unbindService(serviceConnection)
             isServiceBound = false
@@ -191,18 +194,30 @@ class MapActivity : AppCompatActivity() {
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
+    /**
+     * КРИТИЧНО: отменяем предыдущую подписку перед созданием новой.
+     * onServiceConnected() срабатывает заново на каждый bindService()
+     * (то есть на каждый onStart(), в т.ч. после сворачивания приложения) —
+     * без отмены старой корутины подписки накапливались бы при каждом
+     * цикле сворачивания/разворачивания (тот же класс бага, что чинили
+     * в CompassActivity — там он путал сглаживание компаса, здесь мог бы
+     * приводить к повторным показам диалога "Вы вернулись!").
+     */
     private fun observeService(service: TrackingService) {
-        lifecycleScope.launch {
-            service.currentLocation.collect { location ->
-                if (location != null) {
-                    lastKnownLocation = location
-                    onLocationUpdated(location)
+        serviceObserverJob?.cancel()
+        serviceObserverJob = lifecycleScope.launch {
+            launch {
+                service.currentLocation.collect { location ->
+                    if (location != null) {
+                        lastKnownLocation = location
+                        onLocationUpdated(location)
+                    }
                 }
             }
-        }
-        lifecycleScope.launch {
-            service.arrivedHomeEvent.collect { shouldShow ->
-                if (shouldShow) showArrivedDialog()
+            launch {
+                service.arrivedHomeEvent.collect { shouldShow ->
+                    if (shouldShow) showArrivedDialog()
+                }
             }
         }
     }
@@ -219,8 +234,7 @@ class MapActivity : AppCompatActivity() {
                 entryPoint.latitude, entryPoint.longitude,
                 distanceResult
             )
-            binding.topInfoPanel.distanceToHomeText.text =
-                getString(R.string.distance_to_home_label) + ": " + formatDistance(distanceResult[0])
+            binding.topInfoPanel.distanceToHomeText.text = formatDistance(distanceResult[0])
         } else {
             // Нет активной точки (например, после "Я на месте") — поле
             // должно быть пустым, а не показывать последнее значение (п.1).
@@ -233,8 +247,7 @@ class MapActivity : AppCompatActivity() {
         // а не полагается только на разовые сбросы во ViewModel.
         if (viewModel.mode.value == TrackingMode.RECORDING) {
             val app = application as TrailBackApp
-            binding.topInfoPanel.distanceTraveledText.text =
-                getString(R.string.distance_traveled_label) + ": " + formatDistance(app.trackingStateStore.distanceMeters)
+            binding.topInfoPanel.distanceTraveledText.text = formatDistance(app.trackingStateStore.distanceMeters)
         }
     }
 
@@ -473,8 +486,7 @@ class MapActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             viewModel.distanceMeters.collect { meters ->
-                binding.topInfoPanel.distanceTraveledText.text =
-                    getString(R.string.distance_traveled_label) + ": " + formatDistance(meters)
+                binding.topInfoPanel.distanceTraveledText.text = formatDistance(meters)
             }
         }
         lifecycleScope.launch {
@@ -521,12 +533,23 @@ class MapActivity : AppCompatActivity() {
         }
     }
 
-    /** м → км при >1000, с одним знаком после запятой (п.6.1 ТЗ). */
-    private fun formatDistance(meters: Float): String {
-        return if (meters > 1000f) {
-            String.format(Locale.getDefault(), "%.1f км", meters / 1000f)
+    /**
+     * м → км при >1000, с одним знаком после запятой (п.6.1 ТЗ). Единица
+     * измерения рисуется настоящим надстрочным индексом (как на референсе:
+     * "0ᵐ"), а не текстом рядом с числом.
+     */
+    private fun formatDistance(meters: Float): android.text.Spannable {
+        val (valueText, unitText) = if (meters > 1000f) {
+            String.format(Locale.getDefault(), "%.1f", meters / 1000f) to "км"
         } else {
-            String.format(Locale.getDefault(), "%.0f м", meters)
+            String.format(Locale.getDefault(), "%.0f", meters) to "м"
+        }
+        val full = valueText + unitText
+        return android.text.SpannableString(full).apply {
+            val unitStart = valueText.length
+            val unitEnd = full.length
+            setSpan(android.text.style.SuperscriptSpan(), unitStart, unitEnd, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(android.text.style.RelativeSizeSpan(0.45f), unitStart, unitEnd, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
 }

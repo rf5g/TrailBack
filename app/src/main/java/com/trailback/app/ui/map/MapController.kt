@@ -54,6 +54,14 @@ class MapController(
     private var lastMarkerHeading: Float? = null
     private val density = context.resources.displayMetrics.density
     private val markerSizePx: Int = (MARKER_SIZE_DP * density).toInt()
+
+    /**
+     * Следящий режим: пока включён, карта центрируется на каждое обновление
+     * геопозиции (пользователь реально идёт). Отключается автоматически при
+     * любом касании карты (пользователь просматривает/двигает карту вручную)
+     * и включается заново по нажатию кнопки центрирования.
+     */
+    private var followModeEnabled = true
     private val entryPointDateFormat = java.text.SimpleDateFormat(
         "dd.MMM. H:mm", java.util.Locale.getDefault()
     )
@@ -81,6 +89,7 @@ class MapController(
         entryPointMarker = null
         markedPlaceMarkers.clear()
         lastMarkerHeading = null
+        followModeEnabled = true
 
         container.removeAllViews()
 
@@ -139,6 +148,7 @@ class MapController(
 
         tileRendererLayer = layer
         mapView = newMapView
+        attachManualPanDetector(newMapView)
         container.addView(newMapView, FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
         ))
@@ -179,9 +189,26 @@ class MapController(
 
         tileDownloadLayer = downloadLayer
         mapView = newMapView
+        attachManualPanDetector(newMapView)
         container.addView(newMapView, FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
         ))
+    }
+
+    /**
+     * Любое касание карты пользователем (пан, зум жестом, простой тап)
+     * отключает следящий режим — дальше карта не будет "убегать" обратно
+     * к маркеру, пока пользователь её рассматривает. Слушатель ничего не
+     * потребляет (return false), чтобы Mapsforge продолжал штатно
+     * обрабатывать сами жесты.
+     */
+    private fun attachManualPanDetector(mapView: MapView) {
+        mapView.setOnTouchListener { _, event ->
+            if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+                followModeEnabled = false
+            }
+            false
+        }
     }
 
     private fun showPlaceholder() {
@@ -264,9 +291,8 @@ class MapController(
                 val marker = Marker(LatLong(location.latitude, location.longitude), bitmap, 0, 0)
                 mapView.layerManager.layers.add(marker)
                 userPositionMarker = marker
-                // Центрируем только на самой первой полученной позиции, чтобы
-                // карта не стартовала на "null island" (0,0) — дальше центр
-                // меняется только по явному нажатию recenterButton.
+                // Первая позиция — центрируем всегда, чтобы карта не
+                // стартовала на "null island" (0,0), независимо от режима.
                 mapView.model.mapViewPosition.center = LatLong(location.latitude, location.longitude)
             } else {
                 userPositionMarker?.setBitmap(bitmap)
@@ -275,6 +301,15 @@ class MapController(
             lastMarkerHeading = headingDegrees
         } else {
             userPositionMarker?.setLatLong(LatLong(location.latitude, location.longitude))
+        }
+
+        // Следящий режим (п.1 решения): пока пользователь не трогал карту
+        // руками, она сама едет за его реальным перемещением. Как только он
+        // коснулся карты (пан/зум/тап), followModeEnabled=false и центр
+        // остаётся там, где пользователь его оставил, до нажатия кнопки
+        // центрирования.
+        if (followModeEnabled) {
+            mapView.model.mapViewPosition.center = LatLong(location.latitude, location.longitude)
         }
     }
 
@@ -406,6 +441,7 @@ class MapController(
 
     fun recenterOn(location: Location?) {
         location ?: return
+        followModeEnabled = true
         mapView?.model?.mapViewPosition?.center = LatLong(location.latitude, location.longitude)
     }
 

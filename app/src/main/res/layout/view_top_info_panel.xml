@@ -4,32 +4,76 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@color/panel_dark"
-    android:padding="12dp">
+    android:background="@color/background_dark"
+    android:padding="8dp">
 
+    <!-- Ретро-навигаторский стиль: два бокса с подписью сверху и крупной
+         цифрой снизу, разделённые вертикальной линией — по референсу. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:background="@color/info_panel_bg"
+        android:paddingTop="6dp"
+        android:paddingBottom="8dp">
 
-        <TextView
-            android:id="@+id/distanceTraveledText"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="@color/text_white"
-            android:textSize="16sp"
-            tools:text="Путь: 1.2 км" />
+            android:orientation="vertical"
+            android:gravity="center">
 
-        <TextView
-            android:id="@+id/distanceToHomeText"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/label_route_counter"
+                android:textColor="@color/info_panel_label"
+                android:textSize="13sp"
+                android:letterSpacing="0.02" />
+
+            <TextView
+                android:id="@+id/distanceTraveledText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/counter_blue"
+                android:textSize="34sp"
+                android:textStyle="bold"
+                tools:text="0ᵐ" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="1.5dp"
+            android:layout_height="match_parent"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="2dp"
+            android:background="@color/info_panel_border" />
+
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:gravity="end"
-            android:textColor="@color/text_white"
-            android:textSize="16sp"
-            tools:text="До старта: 850 м" />
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/label_distance_to_destination"
+                android:textColor="@color/info_panel_label"
+                android:textSize="13sp"
+                android:letterSpacing="0.02" />
+
+            <TextView
+                android:id="@+id/distanceToHomeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/counter_destination_brown"
+                android:textSize="34sp"
+                android:textStyle="bold"
+                tools:text="19ᵐ" />
+        </LinearLayout>
+
     </LinearLayout>
 
     <TextView

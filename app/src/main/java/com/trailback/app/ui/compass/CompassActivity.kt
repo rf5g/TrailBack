@@ -32,6 +32,7 @@ class CompassActivity : AppCompatActivity() {
     private var homeEntryPoint: EntryPoint? = null
     private var lastLocation: Location? = null
     private var currentHeadingDegrees: Float = 0f
+    private var locationObserverJob: kotlinx.coroutines.Job? = null
 
     // Повторное EMA-сглаживание ИТОГОВОГО угла стрелки (азимут минус курс).
     // Нужно отдельно от сглаживания курса в CompassSensorManager: GPS-азимут
@@ -87,6 +88,8 @@ class CompassActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        locationObserverJob?.cancel()
+        locationObserverJob = null
         if (isServiceBound) {
             unbindService(serviceConnection)
             isServiceBound = false
@@ -97,6 +100,9 @@ class CompassActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         sensorManager.start()
+        // Страховка: пересчитываем склонение по последней известной позиции
+        // сразу при возобновлении, не дожидаясь следующего GPS-тика.
+        lastLocation?.let { sensorManager.updateLocationForDeclination(it) }
     }
 
     override fun onPause() {
@@ -106,8 +112,19 @@ class CompassActivity : AppCompatActivity() {
         super.onPause()
     }
 
+    /**
+     * КРИТИЧНО: отменяем предыдущую подписку перед созданием новой.
+     * onServiceConnected() срабатывает заново при каждом bindService() —
+     * то есть при каждом onStart() (в т.ч. после сворачивания приложения).
+     * Без отмены старой корутины на каждый цикл сворачивания/разворачивания
+     * накапливалась ещё одна параллельная подписка на тот же поток
+     * геопозиции — несколько корутин одновременно писали в общие поля
+     * сглаживания (smoothedArrowSin/Cos), что и приводило к странному,
+     * трудновоспроизводимому поведению стрелки после сворачивания.
+     */
     private fun observeLocation(service: TrackingService) {
-        lifecycleScope.launch {
+        locationObserverJob?.cancel()
+        locationObserverJob = lifecycleScope.launch {
             service.currentLocation.collect { location ->
                 if (location != null) {
                     lastLocation = location

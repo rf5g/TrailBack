@@ -8,6 +8,8 @@
     <string name="button_home">ДОМОЙ</string>
     <string name="distance_traveled_label">Путь</string>
     <string name="distance_to_home_label">До точки старта</string>
+    <string name="label_route_counter">Счётчик пути</string>
+    <string name="label_distance_to_destination">До п. назнач.</string>
     <string name="satellites_label">Спутники GPS: %1$d   ГЛОНАСС: %2$d</string>
     <string name="low_accuracy_warning">Точность спутников низкая (&gt;50 м). Продолжить?</string>
     <string name="confirm_start_title">Начать запись маршрута?</string>
