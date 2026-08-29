@@ -15,10 +15,10 @@
     <!-- Трек активной записи -->
     <color name="track_line_black">#000000</color>
 
-    <!-- Верхняя информационная панель (стиль ретро-навигатора, по референсу) -->
+    <!-- Верхняя информационная панель (единая светлая тема на всю ширину) -->
     <color name="info_panel_bg">#DCE3E8</color>
     <color name="info_panel_border">#2A2A2A</color>
     <color name="info_panel_label">#2A2A2A</color>
-    <color name="counter_blue">#1A5FB4</color>
-    <color name="counter_destination_brown">#8B3A2B</color>
+    <color name="counter_black">#000000</color>
+    <color name="counter_red">#C62828</color>
 </resources>

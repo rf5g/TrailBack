@@ -28,10 +28,16 @@ import com.trailback.app.service.TrackingService
 import com.trailback.app.ui.compass.CompassActivity
 import com.trailback.app.ui.compass.CompassSensorManager
 import com.trailback.app.ui.menu.MenuActivity
+import com.trailback.app.util.DistanceFormatter
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 class MapActivity : AppCompatActivity() {
 
@@ -50,6 +56,23 @@ class MapActivity : AppCompatActivity() {
     private var currentHeading: Float = 0f
     private var lastAppliedOfflineMapsUri: String? = null
     private var serviceObserverJob: kotlinx.coroutines.Job? = null
+
+    // Собственный лёгкий запрос геопозиции для отображения на карте и
+    // кнопки "Старт", пока экран открыт — НЕЗАВИСИМО от фонового сервиса.
+    // Сервис теперь не опрашивает GPS в IDLE/STOPPED (экономия батареи,
+    // см. решение по ТЗ), поэтому карта в эти моменты питается отсюда, а не
+    // от TrackingService. В RECORDING/RETURNING работает параллельно с
+    // сервисом — не мешает, координаты берутся из того же GPS-чипа.
+    private val foregroundLocationClient: FusedLocationProviderClient by lazy {
+        LocationServices.getFusedLocationProviderClient(this)
+    }
+    private val foregroundLocationCallback = object : LocationCallback() {
+        override fun onLocationResult(result: LocationResult) {
+            val location = result.lastLocation ?: return
+            lastKnownLocation = location
+            onLocationUpdated(location)
+        }
+    }
 
     private val gnssStatusCallback = object : GnssStatus.Callback() {
         override fun onSatelliteStatusChanged(status: GnssStatus) {
@@ -136,6 +159,34 @@ class MapActivity : AppCompatActivity() {
         registerGnssStatusCallback()
         viewModel.refreshActiveEntryPoint()
         reapplyOfflineMapIfChanged()
+        startForegroundOnlyLocationUpdates()
+    }
+
+    override fun onPause() {
+        compassSensorManager.stop()
+        unregisterGnssStatusCallback()
+        foregroundLocationClient.removeLocationUpdates(foregroundLocationCallback)
+        super.onPause()
+    }
+
+    /**
+     * Лёгкий запрос геопозиции, активный только пока экран открыт (item 4) —
+     * компенсирует то, что фоновый сервис больше не опрашивает GPS в
+     * IDLE/STOPPED. PRIORITY_BALANCED_POWER_ACCURACY вместо HIGH_ACCURACY —
+     * достаточно для отображения на карте и проверки точности перед
+     * "Старт", но заметно экономнее по батарее.
+     */
+    private fun startForegroundOnlyLocationUpdates() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) return
+
+        val request = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 5_000L).build()
+        try {
+            foregroundLocationClient.requestLocationUpdates(request, foregroundLocationCallback, mainLooper)
+        } catch (e: SecurityException) {
+            // Разрешение не выдано — просто не запускаем обновления.
+        }
     }
 
     /**
@@ -151,12 +202,6 @@ class MapActivity : AppCompatActivity() {
             lastAppliedOfflineMapsUri = currentUri
             mapController.setupMap(currentUri, hasInternetConnection())
         }
-    }
-
-    override fun onPause() {
-        compassSensorManager.stop()
-        unregisterGnssStatusCallback()
-        super.onPause()
     }
 
     private fun registerGnssStatusCallback() {
@@ -234,7 +279,7 @@ class MapActivity : AppCompatActivity() {
                 entryPoint.latitude, entryPoint.longitude,
                 distanceResult
             )
-            binding.topInfoPanel.distanceToHomeText.text = formatDistance(distanceResult[0])
+            binding.topInfoPanel.distanceToHomeText.text = DistanceFormatter.format(distanceResult[0])
         } else {
             // Нет активной точки (например, после "Я на месте") — поле
             // должно быть пустым, а не показывать последнее значение (п.1).
@@ -247,7 +292,7 @@ class MapActivity : AppCompatActivity() {
         // а не полагается только на разовые сбросы во ViewModel.
         if (viewModel.mode.value == TrackingMode.RECORDING) {
             val app = application as TrailBackApp
-            binding.topInfoPanel.distanceTraveledText.text = formatDistance(app.trackingStateStore.distanceMeters)
+            binding.topInfoPanel.distanceTraveledText.text = DistanceFormatter.format(app.trackingStateStore.distanceMeters)
         }
     }
 
@@ -486,7 +531,7 @@ class MapActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             viewModel.distanceMeters.collect { meters ->
-                binding.topInfoPanel.distanceTraveledText.text = formatDistance(meters)
+                binding.topInfoPanel.distanceTraveledText.text = DistanceFormatter.format(meters)
             }
         }
         lifecycleScope.launch {
@@ -533,23 +578,4 @@ class MapActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * м → км при >1000, с одним знаком после запятой (п.6.1 ТЗ). Единица
-     * измерения рисуется настоящим надстрочным индексом (как на референсе:
-     * "0ᵐ"), а не текстом рядом с числом.
-     */
-    private fun formatDistance(meters: Float): android.text.Spannable {
-        val (valueText, unitText) = if (meters > 1000f) {
-            String.format(Locale.getDefault(), "%.1f", meters / 1000f) to "км"
-        } else {
-            String.format(Locale.getDefault(), "%.0f", meters) to "м"
-        }
-        val full = valueText + unitText
-        return android.text.SpannableString(full).apply {
-            val unitStart = valueText.length
-            val unitEnd = full.length
-            setSpan(android.text.style.SuperscriptSpan(), unitStart, unitEnd, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            setSpan(android.text.style.RelativeSizeSpan(0.45f), unitStart, unitEnd, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-    }
 }

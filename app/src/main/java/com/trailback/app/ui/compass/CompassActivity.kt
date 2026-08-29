@@ -1,20 +1,27 @@
 package com.trailback.app.ui.compass
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
+import android.location.GnssStatus
 import android.location.Location
+import android.location.LocationManager
 import android.os.Bundle
 import android.os.IBinder
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.trailback.app.R
 import com.trailback.app.TrailBackApp
 import com.trailback.app.data.db.EntryPoint
 import com.trailback.app.data.repository.NorthMode
 import com.trailback.app.data.repository.TrackingMode
 import com.trailback.app.databinding.ActivityCompassBinding
 import com.trailback.app.service.TrackingService
+import com.trailback.app.util.DistanceFormatter
 import kotlinx.coroutines.launch
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -41,6 +48,27 @@ class CompassActivity : AppCompatActivity() {
     // 0°/360°, даже если сам курс телефона уже сглажен.
     private var smoothedArrowSin: Float? = null
     private var smoothedArrowCos: Float? = null
+
+    /**
+     * Панель с метрами и спутниками должна дублироваться на экране компаса
+     * (см. решение по ТЗ) — раньше layout её подключал, но данные в неё
+     * никогда не писались, отсюда пустые значения. Логика ниже — та же, что
+     * в MapActivity, только без привязки к карте.
+     */
+    private val gnssStatusCallback = object : GnssStatus.Callback() {
+        override fun onSatelliteStatusChanged(status: GnssStatus) {
+            var gpsCount = 0
+            var glonassCount = 0
+            for (i in 0 until status.satelliteCount) {
+                when (status.getConstellationType(i)) {
+                    GnssStatus.CONSTELLATION_GPS -> gpsCount++
+                    GnssStatus.CONSTELLATION_GLONASS -> glonassCount++
+                }
+            }
+            binding.topInfoPanel.satellitesText.text =
+                getString(R.string.satellites_label, gpsCount, glonassCount)
+        }
+    }
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
@@ -77,6 +105,8 @@ class CompassActivity : AppCompatActivity() {
             recomputeArrow()
         }
         sensorManager.northMode = app.settingsStore.northMode
+
+        updateRouteCounter()
     }
 
     override fun onStart() {
@@ -100,16 +130,32 @@ class CompassActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         sensorManager.start()
+        registerGnssStatusCallback()
         // Страховка: пересчитываем склонение по последней известной позиции
         // сразу при возобновлении, не дожидаясь следующего GPS-тика.
         lastLocation?.let { sensorManager.updateLocationForDeclination(it) }
+        updateRouteCounter()
     }
 
     override fun onPause() {
         sensorManager.stop()
+        unregisterGnssStatusCallback()
         smoothedArrowSin = null
         smoothedArrowCos = null
         super.onPause()
+    }
+
+    private fun registerGnssStatusCallback() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) return
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        locationManager.registerGnssStatusCallback(gnssStatusCallback, null)
+    }
+
+    private fun unregisterGnssStatusCallback() {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        locationManager.unregisterGnssStatusCallback(gnssStatusCallback)
     }
 
     /**
@@ -130,9 +176,34 @@ class CompassActivity : AppCompatActivity() {
                     lastLocation = location
                     sensorManager.updateLocationForDeclination(location)
                     recomputeArrow()
+                    updateDistanceToHome(location)
+                    updateRouteCounter()
                 }
             }
         }
+    }
+
+    /** Счётчик пути — то же значение, что и на карте, читается напрямую из stateStore. */
+    private fun updateRouteCounter() {
+        val app = application as TrailBackApp
+        binding.topInfoPanel.distanceTraveledText.text =
+            DistanceFormatter.format(app.trackingStateStore.distanceMeters)
+    }
+
+    /** Дистанция до точки старта — актуальна только в режиме "Домой". */
+    private fun updateDistanceToHome(current: Location) {
+        val entryPoint = homeEntryPoint
+        if (binding.compassView.mode != CompassView.Mode.RETURNING || entryPoint == null) {
+            binding.topInfoPanel.distanceToHomeText.text = ""
+            return
+        }
+        val distanceResult = FloatArray(1)
+        Location.distanceBetween(
+            current.latitude, current.longitude,
+            entryPoint.latitude, entryPoint.longitude,
+            distanceResult
+        )
+        binding.topInfoPanel.distanceToHomeText.text = DistanceFormatter.format(distanceResult[0])
     }
 
     /**

@@ -53,18 +53,18 @@ class CompassView @JvmOverloads constructor(
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
-        textSize = 63f
+        textSize = 85f
     }
     private val headingTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
-        textSize = 96f
+        textSize = 125f
         isFakeBoldText = true
     }
     private val subLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.LTGRAY
         textAlign = Paint.Align.CENTER
-        textSize = 48f
+        textSize = 65f
     }
     private val courseTrianglePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -140,7 +140,7 @@ class CompassView @JvmOverloads constructor(
     private fun drawCenterHeadingText(canvas: Canvas, cx: Float, cy: Float) {
         val roundedHeading = ((headingDegrees + 0.5f).toInt()) % 360
         canvas.drawText(roundedHeading.toString(), cx, cy, headingTextPaint)
-        canvas.drawText(compassPointLabel(headingDegrees), cx, cy + 60f, subLabelPaint)
+        canvas.drawText(compassPointLabel(headingDegrees), cx, cy + 80f, subLabelPaint)
     }
 
     private fun drawHomeArrow(canvas: Canvas, cx: Float, cy: Float, radius: Float) {

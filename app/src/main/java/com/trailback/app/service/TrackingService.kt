@@ -109,13 +109,28 @@ class TrackingService : LifecycleService() {
         }
     }
 
+    /**
+     * Экономия батареи (см. решение по ТЗ): в режимах IDLE/STOPPED нет ни
+     * активного маршрута, ни активного возврата — фоновый опрос GPS с
+     * PRIORITY_HIGH_ACCURACY каждые 10 сек не даёт функциональной пользы
+     * (handleNewLocation для этих режимов и так ничего не делает с данными),
+     * а расходует батарею круглосуточно, даже когда приложение не
+     * используется. В этих режимах сервис вообще не запрашивает геопозицию.
+     * Свежую позицию для карты и кнопки "Старт" вместо этого запрашивает
+     * сама MapActivity — лёгким запросом, активным только пока экран
+     * открыт и приложение на переднем плане (см. MapActivity).
+     */
     private fun startLocationUpdates(mode: TrackingMode) {
         fusedLocationClient.removeLocationUpdates(locationCallback)
 
-        val intervalMillis = when (mode) {
-            TrackingMode.RECORDING -> RECORDING_INTERVAL_MILLIS
-            TrackingMode.RETURNING -> RETURNING_INTERVAL_MILLIS
-            TrackingMode.STOPPED, TrackingMode.IDLE -> RETURNING_INTERVAL_MILLIS
+        if (mode == TrackingMode.IDLE || mode == TrackingMode.STOPPED) {
+            return
+        }
+
+        val intervalMillis = if (mode == TrackingMode.RECORDING) {
+            RECORDING_INTERVAL_MILLIS
+        } else {
+            RETURNING_INTERVAL_MILLIS
         }
         val minDistanceMeters = if (mode == TrackingMode.RECORDING) RECORDING_MIN_DISTANCE_METERS else 0f
 

@@ -4,18 +4,17 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@color/background_dark"
-    android:padding="8dp">
+    android:background="@color/info_panel_bg">
 
-    <!-- Ретро-навигаторский стиль: два бокса с подписью сверху и крупной
-         цифрой снизу, разделённые вертикальной линией — по референсу. -->
+    <!-- Единая светлая панель на всю ширину (без боковых отступов) — два
+         бокса с подписью сверху и крупной цифрой снизу, разделённые
+         вертикальной линией. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="@color/info_panel_bg"
-        android:paddingTop="6dp"
-        android:paddingBottom="8dp">
+        android:paddingTop="8dp"
+        android:paddingBottom="10dp">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -29,21 +28,21 @@
                 android:layout_height="wrap_content"
                 android:text="@string/label_route_counter"
                 android:textColor="@color/info_panel_label"
-                android:textSize="13sp"
+                android:textSize="26sp"
                 android:letterSpacing="0.02" />
 
             <TextView
                 android:id="@+id/distanceTraveledText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/counter_blue"
-                android:textSize="34sp"
+                android:textColor="@color/counter_black"
+                android:textSize="68sp"
                 android:textStyle="bold"
                 tools:text="0ᵐ" />
         </LinearLayout>
 
         <View
-            android:layout_width="1.5dp"
+            android:layout_width="2dp"
             android:layout_height="match_parent"
             android:layout_marginTop="2dp"
             android:layout_marginBottom="2dp"
@@ -61,15 +60,15 @@
                 android:layout_height="wrap_content"
                 android:text="@string/label_distance_to_destination"
                 android:textColor="@color/info_panel_label"
-                android:textSize="13sp"
+                android:textSize="26sp"
                 android:letterSpacing="0.02" />
 
             <TextView
                 android:id="@+id/distanceToHomeText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/counter_destination_brown"
-                android:textSize="34sp"
+                android:textColor="@color/counter_red"
+                android:textSize="68sp"
                 android:textStyle="bold"
                 tools:text="19ᵐ" />
         </LinearLayout>
@@ -80,10 +79,10 @@
         android:id="@+id/satellitesText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:paddingBottom="6dp"
         android:gravity="center"
-        android:textColor="@color/text_gray"
-        android:textSize="13sp"
+        android:textColor="@color/info_panel_label"
+        android:textSize="26sp"
         tools:text="Спутники GPS: 20   ГЛОНАСС: 12" />
 
 </LinearLayout>
