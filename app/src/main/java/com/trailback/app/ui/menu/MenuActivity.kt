@@ -60,6 +60,15 @@ class MenuActivity : AppCompatActivity() {
      * (иначе процесс жил бы дальше как foreground-сервис даже после
      * закрытия всех экранов) и убиваем сам процесс приложения, а не просто
      * закрываем видимые Activity (finishAffinity() оставил бы сервис живым).
+     *
+     * ВАЖНО: уведомление отменяется здесь ЯВНО и СИНХРОННО, до stopService()
+     * и killProcess(). stopService() асинхронный — Android лишь просит
+     * сервис остановиться, а сам onDestroy() выполняется отдельно на главном
+     * потоке процесса. Если сразу после этого вызвать killProcess(), сервис
+     * может не успеть доработать onDestroy() (и его stopForeground()) до
+     * того, как процесс убьют — из-за этого уведомление оставалось висеть
+     * даже после нажатия "Выход". Прямая отмена через NotificationManager
+     * не зависит от того, успел ли сервис корректно завершиться.
      */
     private fun onExitTapped() {
         val app = application as TrailBackApp
@@ -70,6 +79,8 @@ class MenuActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setMessage(com.trailback.app.R.string.exit_confirm_message)
             .setPositiveButton(com.trailback.app.R.string.arrived_dialog_yes) { _, _ ->
+                val notificationManager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+                notificationManager.cancel(com.trailback.app.service.NotificationHelper.FOREGROUND_NOTIFICATION_ID)
                 stopService(Intent(this, com.trailback.app.service.TrackingService::class.java))
                 finishAffinity()
                 android.os.Process.killProcess(android.os.Process.myPid())

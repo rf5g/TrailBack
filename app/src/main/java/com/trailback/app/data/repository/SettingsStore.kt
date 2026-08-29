@@ -10,9 +10,9 @@ class SettingsStore(context: Context) {
     private val prefs = context.applicationContext
         .getSharedPreferences("settings", Context.MODE_PRIVATE)
 
-    /** По умолчанию — истинный север (п.6.3.4 ТЗ). */
+    /** По умолчанию — магнитный север (решение изменено, было истинный). */
     var northMode: NorthMode
-        get() = NorthMode.valueOf(prefs.getString(KEY_NORTH_MODE, NorthMode.TRUE.name)!!)
+        get() = NorthMode.valueOf(prefs.getString(KEY_NORTH_MODE, NorthMode.MAGNETIC.name)!!)
         set(value) = prefs.edit { putString(KEY_NORTH_MODE, value.name) }
 
     /** "ru" или "en" — единственное место переключения языка во всём приложении. */

@@ -172,16 +172,21 @@ class MapActivity : AppCompatActivity() {
     /**
      * Лёгкий запрос геопозиции, активный только пока экран открыт (item 4) —
      * компенсирует то, что фоновый сервис больше не опрашивает GPS в
-     * IDLE/STOPPED. PRIORITY_BALANCED_POWER_ACCURACY вместо HIGH_ACCURACY —
-     * достаточно для отображения на карте и проверки точности перед
-     * "Старт", но заметно экономнее по батарее.
+     * IDLE/STOPPED. Экономия батареи здесь — за счёт ОГРАНИЧЕНИЯ ВРЕМЕНИ
+     * работы (только пока Activity видима, через onResume/onPause), а НЕ за
+     * счёт снижения точности: PRIORITY_BALANCED_POWER_ACCURACY в основном
+     * использует Wi-Fi/сотовую сеть вместо GPS-чипа и даёт точность порядка
+     * сотен метров — этим объяснялось ухудшение показа позиции. Пока
+     * пользователь реально смотрит на экран (и так расходует батарею на сам
+     * экран), полноценная точность GPS оправдана и нужна — в том числе для
+     * корректной проверки перед "Старт" (LOW_ACCURACY_THRESHOLD_METERS).
      */
     private fun startForegroundOnlyLocationUpdates() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
         ) return
 
-        val request = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 5_000L).build()
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5_000L).build()
         try {
             foregroundLocationClient.requestLocationUpdates(request, foregroundLocationCallback, mainLooper)
         } catch (e: SecurityException) {
