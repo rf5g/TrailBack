@@ -20,8 +20,9 @@
         android:id="@+id/topInfoPanel"
         layout="@layout/view_top_info_panel"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintHeight_percent="0.19" />
 
     <!-- Левый край: мини-компас сверху -->
     <com.trailback.app.ui.compass.MiniCompassView
@@ -33,12 +34,20 @@
         app:layout_constraintTop_toBottomOf="@id/topInfoPanel"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <!-- Верхний правый угол: меню и отмеченные места (быстрая отметка), друг под другом -->
+    <!-- Верхний правый угол: меню и отмеченные места (быстрая отметка), друг под другом.
+         Вся правая колонка (меню/отметка/зум/центрирование) собрана в
+         настоящую constraint-цепочку с гибкими распорками между группами —
+         это гарантирует отсутствие наложений кнопок на любом размере экрана
+         (в отличие от независимых vertical_bias у каждой кнопки по
+         отдельности, которые считались относительно ВСЕГО экрана, не учитывая
+         фактическое положение соседних кнопок). -->
     <ImageButton
         android:id="@+id/menuButton"
         style="@style/SquareIconButton"
         android:src="@drawable/ic_menu"
+        app:layout_constraintVertical_chainStyle="spread_inside"
         app:layout_constraintTop_toBottomOf="@id/topInfoPanel"
+        app:layout_constraintBottom_toTopOf="@id/quickMarkButton"
         app:layout_constraintEnd_toEndOf="parent" />
 
     <ImageButton
@@ -46,32 +55,49 @@
         style="@style/SquareIconButton"
         android:src="@drawable/ic_flag"
         app:layout_constraintTop_toBottomOf="@id/menuButton"
+        app:layout_constraintBottom_toTopOf="@id/topButtonSpacer"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Правый край, по центру вертикали: масштаб + и - (та же колонка, что меню/отметка) -->
+    <View
+        android:id="@+id/topButtonSpacer"
+        android:layout_width="1dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/quickMarkButton"
+        app:layout_constraintBottom_toTopOf="@id/zoomInButton"
+        app:layout_constraintVertical_weight="1"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <ImageButton
         android:id="@+id/zoomInButton"
         style="@style/SquareIconButton"
         android:src="@drawable/ic_zoom_in"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topButtonSpacer"
         app:layout_constraintBottom_toTopOf="@id/zoomOutButton"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintVertical_bias="0.5" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <ImageButton
         android:id="@+id/zoomOutButton"
         style="@style/SquareIconButton"
         android:src="@drawable/ic_zoom_out"
         app:layout_constraintTop_toBottomOf="@id/zoomInButton"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintVertical_bias="0.5" />
+        app:layout_constraintBottom_toTopOf="@id/bottomButtonSpacer"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Кнопка центрирования: ближе к правому нижнему углу, но выше главной кнопки -->
+    <View
+        android:id="@+id/bottomButtonSpacer"
+        android:layout_width="1dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/zoomOutButton"
+        app:layout_constraintBottom_toTopOf="@id/recenterButton"
+        app:layout_constraintVertical_weight="1"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Кнопка центрирования: замыкает цепочку сверху главной кнопки -->
     <ImageButton
         android:id="@+id/recenterButton"
         style="@style/SquareIconButton"
         android:src="@drawable/ic_recenter"
+        app:layout_constraintTop_toBottomOf="@id/bottomButtonSpacer"
         app:layout_constraintBottom_toTopOf="@id/mainActionButton"
         app:layout_constraintEnd_toEndOf="parent" />
 

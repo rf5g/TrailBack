@@ -20,6 +20,7 @@ import org.mapsforge.core.model.LatLong
 import org.mapsforge.map.android.graphics.AndroidGraphicFactory
 import org.mapsforge.map.android.util.AndroidUtil
 import org.mapsforge.map.android.view.MapView
+import org.mapsforge.map.layer.overlay.Circle
 import org.mapsforge.map.datastore.MapDataStore
 import org.mapsforge.map.layer.cache.TileCache
 import org.mapsforge.map.layer.download.TileDownloadLayer
@@ -48,6 +49,7 @@ class MapController(
     private var trackPolyline: Polyline? = null
     private var homeLinePolyline: Polyline? = null
     private var userPositionMarker: Marker? = null
+    private var accuracyCircle: Circle? = null
     private var entryPointMarker: Marker? = null
     private val markedPlaceMarkers = mutableListOf<Marker>()
 
@@ -86,6 +88,7 @@ class MapController(
         trackPolyline = null
         homeLinePolyline = null
         userPositionMarker = null
+        accuracyCircle = null
         entryPointMarker = null
         markedPlaceMarkers.clear()
         lastMarkerHeading = null
@@ -332,6 +335,8 @@ class MapController(
         val mapView = this.mapView ?: return
         if (location == null) return
 
+        updateAccuracyCircle(mapView, location)
+
         val previousHeading = lastMarkerHeading
         val headingChanged = previousHeading == null || angularDifference(previousHeading, headingDegrees) > 3f
 
@@ -362,6 +367,47 @@ class MapController(
         // центрирования.
         if (followModeEnabled) {
             mapView.model.mapViewPosition.center = LatLong(location.latitude, location.longitude)
+        }
+    }
+
+    /**
+     * Визуализация точности позиционирования — полупрозрачный круг вокруг
+     * маркера радиусом location.accuracy (в метрах), как принято в
+     * навигационных приложениях (Google Maps, Яндекс.Карты). Обновляется на
+     * месте через штатные setLatLong/setRadius Mapsforge — без пересоздания
+     * слоя на каждый тик, чтобы не ломать порядок отрисовки (круг должен
+     * оставаться под стрелкой положения).
+     */
+    private fun updateAccuracyCircle(mapView: MapView, location: Location) {
+        val radiusMeters = location.accuracy.coerceAtLeast(1f)
+        val existing = accuracyCircle
+        if (existing == null) {
+            val circle = Circle(
+                LatLong(location.latitude, location.longitude),
+                radiusMeters,
+                accuracyFillPaint,
+                accuracyStrokePaint
+            )
+            mapView.layerManager.layers.add(circle)
+            accuracyCircle = circle
+        } else {
+            existing.setLatLong(LatLong(location.latitude, location.longitude))
+            existing.setRadius(radiusMeters)
+        }
+    }
+
+    private val accuracyFillPaint by lazy {
+        AndroidGraphicFactory.INSTANCE.createPaint().apply {
+            setStyle(Style.FILL)
+            color = 0x33E65100.toInt() // акцентный цвет приложения, ~20% непрозрачности
+        }
+    }
+
+    private val accuracyStrokePaint by lazy {
+        AndroidGraphicFactory.INSTANCE.createPaint().apply {
+            setStyle(Style.STROKE)
+            color = 0x88E65100.toInt() // тот же цвет, контур более заметный
+            strokeWidth = 1.5f * density
         }
     }
 

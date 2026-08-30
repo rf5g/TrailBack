@@ -2,19 +2,22 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
+    android:gravity="center_vertical"
     android:background="@color/info_panel_bg">
 
     <!-- Единая светлая панель на всю ширину (без боковых отступов) — два
          бокса с подписью сверху и крупной цифрой снизу, разделённые
-         вертикальной линией. -->
+         вертикальной линией. Панель ограничена 19% высоты экрана (см.
+         activity_map.xml / activity_compass.xml), содержимое центрируется
+         по вертикали внутри этой полосы. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingTop="8dp"
-        android:paddingBottom="10dp">
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -28,7 +31,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/label_route_counter"
                 android:textColor="@color/info_panel_label"
-                android:textSize="26sp"
+                android:textSize="15sp"
                 android:letterSpacing="0.02" />
 
             <TextView
@@ -36,7 +39,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/counter_black"
-                android:textSize="68sp"
+                android:textSize="40sp"
                 android:textStyle="bold"
                 tools:text="0ᵐ" />
         </LinearLayout>
@@ -60,7 +63,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/label_distance_to_destination"
                 android:textColor="@color/info_panel_label"
-                android:textSize="26sp"
+                android:textSize="15sp"
                 android:letterSpacing="0.02" />
 
             <TextView
@@ -68,7 +71,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/counter_red"
-                android:textSize="68sp"
+                android:textSize="40sp"
                 android:textStyle="bold"
                 tools:text="19ᵐ" />
         </LinearLayout>
@@ -79,10 +82,10 @@
         android:id="@+id/satellitesText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="6dp"
         android:gravity="center"
-        android:textColor="@color/info_panel_label"
-        android:textSize="26sp"
+        android:text="—"
+        android:textColor="@color/counter_black"
+        android:textSize="15sp"
         tools:text="Спутники GPS: 20   ГЛОНАСС: 12" />
 
 </LinearLayout>
