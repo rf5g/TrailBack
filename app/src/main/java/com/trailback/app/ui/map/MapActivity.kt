@@ -6,9 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
-import android.location.GnssStatus
 import android.location.Location
-import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
@@ -27,8 +25,8 @@ import com.trailback.app.databinding.ActivityMapBinding
 import com.trailback.app.service.TrackingService
 import com.trailback.app.ui.compass.CompassActivity
 import com.trailback.app.ui.compass.CompassSensorManager
+import com.trailback.app.ui.common.InfoPanelController
 import com.trailback.app.ui.menu.MenuActivity
-import com.trailback.app.util.DistanceFormatter
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -56,6 +54,7 @@ class MapActivity : AppCompatActivity() {
     private var currentHeading: Float = 0f
     private var lastAppliedOfflineMapsUri: String? = null
     private var serviceObserverJob: kotlinx.coroutines.Job? = null
+    private lateinit var infoPanelController: InfoPanelController
 
     // Собственный лёгкий запрос геопозиции для отображения на карте и
     // кнопки "Старт", пока экран открыт — НЕЗАВИСИМО от фонового сервиса.
@@ -71,21 +70,6 @@ class MapActivity : AppCompatActivity() {
             val location = result.lastLocation ?: return
             lastKnownLocation = location
             onLocationUpdated(location)
-        }
-    }
-
-    private val gnssStatusCallback = object : GnssStatus.Callback() {
-        override fun onSatelliteStatusChanged(status: GnssStatus) {
-            var gpsCount = 0
-            var glonassCount = 0
-            for (i in 0 until status.satelliteCount) {
-                when (status.getConstellationType(i)) {
-                    GnssStatus.CONSTELLATION_GPS -> gpsCount++
-                    GnssStatus.CONSTELLATION_GLONASS -> glonassCount++
-                }
-            }
-            binding.topInfoPanel.satellitesText.text =
-                getString(R.string.satellites_label, gpsCount, glonassCount)
         }
     }
 
@@ -126,6 +110,7 @@ class MapActivity : AppCompatActivity() {
             binding.miniCompassView.headingDegrees = heading
         }
         compassSensorManager.northMode = app.settingsStore.northMode
+        infoPanelController = InfoPanelController(this, binding.topInfoPanel)
 
         checkCrashRecoveryThenStart(app)
         setupButtons()
@@ -156,7 +141,7 @@ class MapActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         compassSensorManager.start()
-        registerGnssStatusCallback()
+        infoPanelController.start()
         viewModel.refreshActiveEntryPoint()
         reapplyOfflineMapIfChanged()
         startForegroundOnlyLocationUpdates()
@@ -164,7 +149,7 @@ class MapActivity : AppCompatActivity() {
 
     override fun onPause() {
         compassSensorManager.stop()
-        unregisterGnssStatusCallback()
+        infoPanelController.stop()
         foregroundLocationClient.removeLocationUpdates(foregroundLocationCallback)
         super.onPause()
     }
@@ -207,19 +192,6 @@ class MapActivity : AppCompatActivity() {
             lastAppliedOfflineMapsUri = currentUri
             mapController.setupMap(currentUri, hasInternetConnection())
         }
-    }
-
-    private fun registerGnssStatusCallback() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) return
-        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        locationManager.registerGnssStatusCallback(gnssStatusCallback, null)
-    }
-
-    private fun unregisterGnssStatusCallback() {
-        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        locationManager.unregisterGnssStatusCallback(gnssStatusCallback)
     }
 
     override fun onStop() {
@@ -277,27 +249,14 @@ class MapActivity : AppCompatActivity() {
         val entryPoint = viewModel.activeEntryPoint.value
         mapController.updateHomeLine(location, entryPoint, viewModel.mode.value)
 
-        if (entryPoint != null) {
-            val distanceResult = FloatArray(1)
-            Location.distanceBetween(
-                location.latitude, location.longitude,
-                entryPoint.latitude, entryPoint.longitude,
-                distanceResult
-            )
-            binding.topInfoPanel.distanceToHomeText.text = DistanceFormatter.format(distanceResult[0])
-        } else {
-            // Нет активной точки (например, после "Я на месте") — поле
-            // должно быть пустым, а не показывать последнее значение (п.1).
-            binding.topInfoPanel.distanceToHomeText.text = ""
-        }
+        infoPanelController.updateDistanceToDestination(location, entryPoint)
 
         // Счётчик пути (п.6): TrackingService копит дистанцию в
         // TrackingStateStore напрямую (не через ViewModel), поэтому UI
         // синхронизируется с реальным значением на каждый тик геопозиции,
         // а не полагается только на разовые сбросы во ViewModel.
         if (viewModel.mode.value == TrackingMode.RECORDING) {
-            val app = application as TrailBackApp
-            binding.topInfoPanel.distanceTraveledText.text = DistanceFormatter.format(app.trackingStateStore.distanceMeters)
+            infoPanelController.updateRouteCounter()
         }
     }
 
@@ -535,8 +494,8 @@ class MapActivity : AppCompatActivity() {
             }
         }
         lifecycleScope.launch {
-            viewModel.distanceMeters.collect { meters ->
-                binding.topInfoPanel.distanceTraveledText.text = DistanceFormatter.format(meters)
+            viewModel.distanceMeters.collect {
+                infoPanelController.updateRouteCounter()
             }
         }
         lifecycleScope.launch {
