@@ -103,7 +103,9 @@ class MapActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this, MapViewModel.Factory(app))[MapViewModel::class.java]
         mapController = MapController(this, binding.mapContainer)
         lastAppliedOfflineMapsUri = app.settingsStore.offlineMapsUri
-        mapController.setupMap(lastAppliedOfflineMapsUri, hasInternetConnection())
+        lifecycleScope.launch {
+            mapController.setupMap(lastAppliedOfflineMapsUri, hasInternetConnection())
+        }
 
         compassSensorManager = CompassSensorManager(this) { heading ->
             currentHeading = heading
@@ -190,7 +192,9 @@ class MapActivity : AppCompatActivity() {
         val currentUri = app.settingsStore.offlineMapsUri
         if (currentUri != lastAppliedOfflineMapsUri) {
             lastAppliedOfflineMapsUri = currentUri
-            mapController.setupMap(currentUri, hasInternetConnection())
+            lifecycleScope.launch {
+                mapController.setupMap(currentUri, hasInternetConnection())
+            }
         }
     }
 

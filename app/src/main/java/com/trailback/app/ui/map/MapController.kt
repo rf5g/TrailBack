@@ -15,6 +15,8 @@ import com.trailback.app.data.db.EntryPoint
 import com.trailback.app.data.db.TrackPoint
 import com.trailback.app.data.db.MarkedPlace
 import com.trailback.app.data.repository.TrackingMode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.mapsforge.core.graphics.Style
 import org.mapsforge.core.model.LatLong
 import org.mapsforge.map.android.graphics.AndroidGraphicFactory
@@ -72,7 +74,18 @@ class MapController(
         AndroidGraphicFactory.createInstance(context.applicationContext as android.app.Application)
     }
 
-    fun setupMap(offlineMapsUri: String?, hasInternet: Boolean) {
+    /**
+     * КРИТИЧНО: копирование файла офлайн-карты (может весить сотни МБ)
+     * раньше выполнялось СИНХРОННО на вызывающем потоке — а вызывалось это
+     * из onCreate()/onResume(), то есть на главном UI-потоке. Для файла
+     * ~700 МБ это гарантированный ANR ("вылетает при первом предоставлении
+     * доступа к папке") — Android считает, что приложение зависло, и
+     * убивает его. Второй раз "работает нормально", вероятно, потому что
+     * чтение через SAF идёт уже из тёплого файлового кэша ОС и укладывается
+     * в лимит ANR. Теперь копирование выполняется на Dispatchers.IO, а
+     * заглушка показывается сразу — пользователь не видит зависания.
+     */
+    suspend fun setupMap(offlineMapsUri: String?, hasInternet: Boolean) {
         // Уничтожаем предыдущий MapView (если это переинициализация после смены
         // офлайн-карты в настройках, см. решение по ТЗ — раньше карта менялась
         // только после полного перезапуска приложения) и сбрасываем ссылки на
@@ -96,26 +109,49 @@ class MapController(
 
         container.removeAllViews()
 
-        val mapFile = offlineMapsUri?.let { resolveFirstMapFile(it) }
-        when {
-            mapFile != null -> showOfflineMap(mapFile)
-            hasInternet -> showOnlineMap()
-            else -> showPlaceholder()
+        if (offlineMapsUri != null) {
+            // Показываем заглушку сразу — пока в фоне может идти копирование
+            // большого файла карты, пользователь не видит зависший экран.
+            showPlaceholder()
+            val mapFile = withContext(Dispatchers.IO) { resolveFirstMapFile(offlineMapsUri) }
+            if (mapFile != null) {
+                container.removeAllViews()
+                showOfflineMap(mapFile)
+                return
+            }
+            // Офлайн-карта не найдена/не читается — пробуем онлайн или заглушку.
+            container.removeAllViews()
+        }
+
+        if (hasInternet) {
+            showOnlineMap()
+        } else {
+            showPlaceholder()
         }
     }
 
+    /**
+     * Выполняется на Dispatchers.IO (см. вызывающий код). Пропускает
+     * повторное копирование, если в кэше уже лежит файл с тем же именем и
+     * размером — иначе при каждом пересоздании экрана карты (например,
+     * после смены ориентации) 700-мегабайтный файл копировался бы заново.
+     */
     private fun resolveFirstMapFile(treeUriString: String): File? {
         return try {
             val treeUri = Uri.parse(treeUriString)
             val documentFile = DocumentFile.fromTreeUri(context, treeUri) ?: return null
             val mapDoc = documentFile.listFiles().firstOrNull { it.name?.endsWith(".map") == true }
-            mapDoc?.uri?.let { uri ->
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    val cacheFile = File(context.cacheDir, mapDoc.name ?: "offline.map")
-                    cacheFile.outputStream().use { output -> input.copyTo(output) }
-                    cacheFile
-                }
+                ?: return null
+
+            val cacheFile = File(context.cacheDir, mapDoc.name ?: "offline.map")
+            if (cacheFile.exists() && cacheFile.length() == mapDoc.length()) {
+                return cacheFile
             }
+
+            context.contentResolver.openInputStream(mapDoc.uri)?.use { input ->
+                cacheFile.outputStream().use { output -> input.copyTo(output) }
+            }
+            cacheFile
         } catch (e: Exception) {
             null
         }
