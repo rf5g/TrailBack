@@ -14,8 +14,7 @@
     <string name="satellites_label">Satellites GPS: %1$d   GLONASS: %2$d</string>
     <string name="low_accuracy_warning">Satellite accuracy is low (&gt;50 m). Continue?</string>
     <string name="confirm_start_title">Start recording?</string>
-    <string name="confirm_stop_title">Stop recording?</string>
-    <string name="confirm_home_title">Start return mode?</string>
+    <string name="confirm_home_title">Stop recording and start return mode?</string>
 
     <!-- Прибытие домой -->
     <string name="arrived_dialog_title">You are back!</string>

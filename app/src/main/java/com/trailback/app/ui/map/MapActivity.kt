@@ -363,8 +363,7 @@ class MapActivity : AppCompatActivity() {
         binding.mainActionButton.setOnClickListener {
             when (viewModel.mode.value) {
                 TrackingMode.IDLE -> confirmStart()
-                TrackingMode.RECORDING -> confirmStop()
-                TrackingMode.STOPPED -> confirmHome()
+                TrackingMode.RECORDING -> confirmHome()
                 TrackingMode.RETURNING -> confirmManualArrival()
             }
         }
@@ -395,17 +394,6 @@ class MapActivity : AppCompatActivity() {
                     viewModel.onStartConfirmed(it)
                     trackingService?.updateMode(TrackingMode.RECORDING)
                 }
-            }
-            .setNegativeButton(R.string.arrived_dialog_no, null)
-            .show()
-    }
-
-    private fun confirmStop() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.confirm_stop_title)
-            .setPositiveButton(R.string.arrived_dialog_yes) { _, _ ->
-                viewModel.onStopConfirmed()
-                trackingService?.updateMode(TrackingMode.STOPPED)
             }
             .setNegativeButton(R.string.arrived_dialog_no, null)
             .show()
@@ -540,8 +528,7 @@ class MapActivity : AppCompatActivity() {
     private fun updateButtonForMode(mode: TrackingMode) {
         binding.mainActionButton.text = when (mode) {
             TrackingMode.IDLE -> getString(R.string.button_start)
-            TrackingMode.RECORDING -> getString(R.string.button_stop)
-            TrackingMode.STOPPED -> getString(R.string.button_home)
+            TrackingMode.RECORDING -> getString(R.string.button_home)
             TrackingMode.RETURNING -> getString(R.string.manual_arrival_button)
         }
     }

@@ -5,9 +5,8 @@ import androidx.core.content.edit
 
 enum class TrackingMode {
     IDLE,       // кнопка "Старт" — трекинг не активен
-    RECORDING,  // кнопка "Стоп" — идёт запись трека
-    STOPPED,    // кнопка "Домой" — запись остановлена, возврат ещё не начат
-    RETURNING   // режим возврата активен — на карте/компасе стрелка на старт
+    RECORDING,  // кнопка "Домой" — идёт запись трека
+    RETURNING   // кнопка "Я на месте" — режим возврата активен
 }
 
 /**
@@ -56,8 +55,8 @@ class TrackingStateStore(context: Context) {
 
     /**
      * true, если есть незавершённый трек в допустимом окне восстановления (72 ч).
-     * По решению из обсуждения ТЗ восстанавливаются только состояния RECORDING
-     * (режим "Старт") и RETURNING (режим "Домой") — не STOPPED.
+     * Восстанавливаются только состояния RECORDING (идёт запись) и RETURNING
+     * (режим "Домой").
      */
     fun hasRecoverableTrack(nowMillis: Long): Boolean {
         if (mode != TrackingMode.RECORDING && mode != TrackingMode.RETURNING) return false

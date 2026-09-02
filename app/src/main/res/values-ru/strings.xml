@@ -13,8 +13,7 @@
     <string name="satellites_label">Спутники GPS: %1$d   ГЛОНАСС: %2$d</string>
     <string name="low_accuracy_warning">Точность спутников низкая (&gt;50 м). Продолжить?</string>
     <string name="confirm_start_title">Начать запись маршрута?</string>
-    <string name="confirm_stop_title">Остановить запись?</string>
-    <string name="confirm_home_title">Включить режим возврата?</string>
+    <string name="confirm_home_title">Остановить запись и включить режим возврата?</string>
 
     <string name="arrived_dialog_title">Вы вернулись!</string>
     <string name="arrived_dialog_message">Вы действительно достигли точки старта?</string>

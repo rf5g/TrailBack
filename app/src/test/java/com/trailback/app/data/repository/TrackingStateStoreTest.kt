@@ -29,17 +29,6 @@ class TrackingStateStoreTest {
     }
 
     @Test
-    fun `no recoverable track when mode is STOPPED`() {
-        // По решению из обсуждения ТЗ восстанавливаются только RECORDING и RETURNING,
-        // не промежуточное состояние STOPPED (кнопка "Домой", запись ещё не запущена).
-        store.mode = TrackingMode.STOPPED
-        store.activeEntryPointId = 1L
-        store.lastUpdateTimestamp = System.currentTimeMillis()
-
-        assertFalse(store.hasRecoverableTrack(System.currentTimeMillis()))
-    }
-
-    @Test
     fun `recoverable when RECORDING and within 72 hours`() {
         val now = System.currentTimeMillis()
         store.mode = TrackingMode.RECORDING

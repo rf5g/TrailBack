@@ -94,7 +94,7 @@ class TrackingService : LifecycleService() {
     private fun statusTextForMode(mode: TrackingMode): String = when (mode) {
         TrackingMode.RECORDING -> getString(R.string.tracking_notification_recording)
         TrackingMode.RETURNING -> getString(R.string.tracking_notification_returning)
-        TrackingMode.STOPPED, TrackingMode.IDLE -> getString(R.string.tracking_notification_idle)
+        TrackingMode.IDLE -> getString(R.string.tracking_notification_idle)
     }
 
     fun triggerManualArrivalCheck() {
@@ -110,12 +110,12 @@ class TrackingService : LifecycleService() {
     }
 
     /**
-     * Экономия батареи (см. решение по ТЗ): в режимах IDLE/STOPPED нет ни
-     * активного маршрута, ни активного возврата — фоновый опрос GPS с
+     * Экономия батареи (см. решение по ТЗ): в режиме IDLE нет ни активного
+     * маршрута, ни активного возврата — фоновый опрос GPS с
      * PRIORITY_HIGH_ACCURACY каждые 10 сек не даёт функциональной пользы
-     * (handleNewLocation для этих режимов и так ничего не делает с данными),
+     * (handleNewLocation для этого режима и так ничего не делает с данными),
      * а расходует батарею круглосуточно, даже когда приложение не
-     * используется. В этих режимах сервис вообще не запрашивает геопозицию.
+     * используется. В этом режиме сервис вообще не запрашивает геопозицию.
      * Свежую позицию для карты и кнопки "Старт" вместо этого запрашивает
      * сама MapActivity — лёгким запросом, активным только пока экран
      * открыт и приложение на переднем плане (см. MapActivity).
@@ -123,7 +123,7 @@ class TrackingService : LifecycleService() {
     private fun startLocationUpdates(mode: TrackingMode) {
         fusedLocationClient.removeLocationUpdates(locationCallback)
 
-        if (mode == TrackingMode.IDLE || mode == TrackingMode.STOPPED) {
+        if (mode == TrackingMode.IDLE) {
             return
         }
 
@@ -168,7 +168,7 @@ class TrackingService : LifecycleService() {
                         _arrivedHomeEvent.value = true
                     }
                 }
-                TrackingMode.STOPPED, TrackingMode.IDLE -> Unit
+                TrackingMode.IDLE -> Unit
             }
         }
     }

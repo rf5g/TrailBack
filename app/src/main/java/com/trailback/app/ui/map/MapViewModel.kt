@@ -44,15 +44,12 @@ class MapViewModel(
         }
     }
 
-    /** "Стоп": запись останавливается, кнопка переходит в состояние "Домой". */
-    fun onStopConfirmed() {
-        viewModelScope.launch {
-            stateStore.mode = TrackingMode.STOPPED
-            stateStore.lastUpdateTimestamp = System.currentTimeMillis()
-            _mode.value = TrackingMode.STOPPED
-        }
-    }
-
+    /**
+     * "Домой": раньше это было два отдельных шага (сначала "Стоп" —
+     * остановка записи, потом отдельно "Домой" — включение возврата).
+     * Теперь одно действие сразу делает и то, и другое — упрощение до трёх
+     * шагов (Старт / Домой / Я на месте) по решению.
+     */
     fun onHomeConfirmed() {
         viewModelScope.launch {
             repository.enterReturningMode()
