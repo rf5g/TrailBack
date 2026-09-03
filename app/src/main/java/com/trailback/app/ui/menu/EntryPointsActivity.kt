@@ -1,5 +1,4 @@
 package com.trailback.app.ui.menu
-
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
@@ -26,13 +25,10 @@ import com.trailback.app.service.TrackingService
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
-
 class EntryPointsActivity : AppCompatActivity() {
-
     private lateinit var binding: ActivityEntryPointsBinding
     private var trackingService: TrackingService? = null
     private var isServiceBound = false
-
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
             trackingService = (binder as TrackingService.LocalBinder).getService()
@@ -41,15 +37,12 @@ class EntryPointsActivity : AppCompatActivity() {
             trackingService = null
         }
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityEntryPointsBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         val app = application as TrailBackApp
         binding.list.layoutManager = LinearLayoutManager(this)
-
         lifecycleScope.launch {
             app.trackingRepository.observeEntryPoints().collect { points ->
                 binding.list.adapter = EntryPointsAdapter(
@@ -59,12 +52,10 @@ class EntryPointsActivity : AppCompatActivity() {
                 )
             }
         }
-
         binding.clearAllButton.setOnClickListener {
             showClearConfirmation1(app)
         }
     }
-
     override fun onStart() {
         super.onStart()
         Intent(this, TrackingService::class.java).also { intent ->
@@ -72,7 +63,6 @@ class EntryPointsActivity : AppCompatActivity() {
             isServiceBound = true
         }
     }
-
     override fun onStop() {
         if (isServiceBound) {
             unbindService(serviceConnection)
@@ -80,7 +70,6 @@ class EntryPointsActivity : AppCompatActivity() {
         }
         super.onStop()
     }
-
     /**
      * По тапу — диалог "Выбрать эту точку?". Смена активной точки
      * заблокирована, пока активен режим "Домой" (см. решение по ТЗ).
@@ -108,14 +97,12 @@ class EntryPointsActivity : AppCompatActivity() {
             .setNegativeButton(R.string.arrived_dialog_no, null)
             .show()
     }
-
     private fun copyCoordinates(point: EntryPoint) {
         val text = "%.6f, %.6f".format(point.latitude, point.longitude)
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("coordinates", text))
         Toast.makeText(this, R.string.coordinates_copied, Toast.LENGTH_SHORT).show()
     }
-
     /** Тройное подтверждение массовой очистки (см. п.6.3 ТЗ и решение по формулировкам). */
     private fun showClearConfirmation1(app: TrailBackApp) {
         AlertDialog.Builder(this)
@@ -124,7 +111,6 @@ class EntryPointsActivity : AppCompatActivity() {
             .setNegativeButton(R.string.arrived_dialog_no, null)
             .show()
     }
-
     private fun showClearConfirmation2(app: TrailBackApp) {
         AlertDialog.Builder(this)
             .setMessage(R.string.clear_entry_points_warning_2)
@@ -132,7 +118,6 @@ class EntryPointsActivity : AppCompatActivity() {
             .setNegativeButton(R.string.arrived_dialog_no, null)
             .show()
     }
-
     private fun showClearConfirmation3(app: TrailBackApp) {
         AlertDialog.Builder(this)
             .setMessage(R.string.clear_entry_points_warning_3)
@@ -143,34 +128,27 @@ class EntryPointsActivity : AppCompatActivity() {
             .show()
     }
 }
-
 class EntryPointsAdapter(
     private val items: List<EntryPoint>,
     private val onTap: (EntryPoint) -> Unit,
     private val onLongPress: (EntryPoint) -> Unit
 ) : RecyclerView.Adapter<EntryPointsAdapter.ViewHolder>() {
-
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-
     inner class ViewHolder(val binding: ItemMenuRowBinding) : RecyclerView.ViewHolder(binding.root)
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemMenuRowBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return ViewHolder(binding)
     }
-
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val point = items[position]
         holder.binding.titleText.text =
             "${point.name} — ${dateFormat.format(point.timestamp)}\n" +
             "%.5f, %.5f".format(point.latitude, point.longitude)
-
         holder.binding.root.setOnClickListener { onTap(point) }
         holder.binding.root.setOnLongClickListener {
             onLongPress(point)
             true
         }
     }
-
     override fun getItemCount() = items.size
 }

@@ -4,7 +4,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_dark">
-
     <!-- Контейнер карты: сюда подключается org.mapsforge MapView программно,
          либо отображается серая заглушка при отсутствии офлайн-карт и интернета -->
     <FrameLayout
@@ -15,14 +14,12 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-
     <include
         android:id="@+id/topInfoPanel"
         layout="@layout/view_top_info_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent" />
-
     <!-- Левый край: мини-компас сверху -->
     <com.trailback.app.ui.compass.MiniCompassView
         android:id="@+id/miniCompassView"
@@ -32,7 +29,6 @@
         android:background="@drawable/bg_circle_panel"
         app:layout_constraintTop_toBottomOf="@id/topInfoPanel"
         app:layout_constraintStart_toStartOf="parent" />
-
     <!-- Верхний правый угол: меню и отмеченные места (быстрая отметка), друг под другом.
          Вся правая колонка (меню/отметка/зум/центрирование) собрана в
          настоящую constraint-цепочку с гибкими распорками между группами —
@@ -48,7 +44,6 @@
         app:layout_constraintTop_toBottomOf="@id/topInfoPanel"
         app:layout_constraintBottom_toTopOf="@id/quickMarkButton"
         app:layout_constraintEnd_toEndOf="parent" />
-
     <ImageButton
         android:id="@+id/quickMarkButton"
         style="@style/SquareIconButton"
@@ -56,7 +51,6 @@
         app:layout_constraintTop_toBottomOf="@id/menuButton"
         app:layout_constraintBottom_toTopOf="@id/topButtonSpacer"
         app:layout_constraintEnd_toEndOf="parent" />
-
     <View
         android:id="@+id/topButtonSpacer"
         android:layout_width="1dp"
@@ -65,7 +59,6 @@
         app:layout_constraintBottom_toTopOf="@id/zoomInButton"
         app:layout_constraintVertical_weight="1"
         app:layout_constraintEnd_toEndOf="parent" />
-
     <ImageButton
         android:id="@+id/zoomInButton"
         style="@style/SquareIconButton"
@@ -73,7 +66,6 @@
         app:layout_constraintTop_toBottomOf="@id/topButtonSpacer"
         app:layout_constraintBottom_toTopOf="@id/zoomOutButton"
         app:layout_constraintEnd_toEndOf="parent" />
-
     <ImageButton
         android:id="@+id/zoomOutButton"
         style="@style/SquareIconButton"
@@ -81,7 +73,6 @@
         app:layout_constraintTop_toBottomOf="@id/zoomInButton"
         app:layout_constraintBottom_toTopOf="@id/bottomButtonSpacer"
         app:layout_constraintEnd_toEndOf="parent" />
-
     <View
         android:id="@+id/bottomButtonSpacer"
         android:layout_width="1dp"
@@ -90,7 +81,6 @@
         app:layout_constraintBottom_toTopOf="@id/recenterButton"
         app:layout_constraintVertical_weight="1"
         app:layout_constraintEnd_toEndOf="parent" />
-
     <!-- Кнопка центрирования: замыкает цепочку сверху главной кнопки -->
     <ImageButton
         android:id="@+id/recenterButton"
@@ -99,7 +89,6 @@
         app:layout_constraintTop_toBottomOf="@id/bottomButtonSpacer"
         app:layout_constraintBottom_toTopOf="@id/mainActionButton"
         app:layout_constraintEnd_toEndOf="parent" />
-
     <!-- Главная кнопка — теперь включает и роль "Я на месте" в режиме "Домой" -->
     <Button
         android:id="@+id/mainActionButton"
@@ -110,5 +99,4 @@
         android:text="@string/button_start"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>

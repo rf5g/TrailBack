@@ -1,8 +1,6 @@
 package com.trailback.app.data.db
-
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-
 /**
  * Промежуточная точка активного трека.
  *

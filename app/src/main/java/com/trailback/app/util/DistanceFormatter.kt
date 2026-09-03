@@ -1,11 +1,9 @@
 package com.trailback.app.util
-
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.RelativeSizeSpan
 import android.text.style.SuperscriptSpan
 import java.util.Locale
-
 /**
  * Общая логика форматирования дистанции — используется и на экране карты,
  * и на экране компаса (см. решение по ТЗ: панель должна дублироваться на
@@ -13,7 +11,6 @@ import java.util.Locale
  * надстрочным индексом ("0ᵐ"), как на референсе.
  */
 object DistanceFormatter {
-
     /** м → км при >1000, с одним знаком после запятой (п.6.1 ТЗ). */
     fun format(meters: Float): Spannable {
         val (valueText, unitText) = if (meters > 1000f) {

@@ -1,5 +1,4 @@
 package com.trailback.app.ui.map
-
 import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -13,27 +12,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
 class MapViewModel(
     private val repository: TrackingRepository,
     private val stateStore: TrackingStateStore
 ) : ViewModel() {
-
     private val _mode = MutableStateFlow(stateStore.mode)
     val mode: StateFlow<TrackingMode> = _mode.asStateFlow()
-
     private val _distanceMeters = MutableStateFlow(stateStore.distanceMeters)
     val distanceMeters: StateFlow<Float> = _distanceMeters.asStateFlow()
-
     private val _activeEntryPoint = MutableStateFlow<EntryPoint?>(null)
     val activeEntryPoint: StateFlow<EntryPoint?> = _activeEntryPoint.asStateFlow()
-
     init {
         viewModelScope.launch {
             _activeEntryPoint.value = repository.getActiveEntryPoint()
         }
     }
-
     fun onStartConfirmed(location: Location) {
         viewModelScope.launch {
             val name = "Вход ${java.text.SimpleDateFormat("dd.MM HH:mm").format(java.util.Date())}"
@@ -43,7 +36,6 @@ class MapViewModel(
             _activeEntryPoint.value = repository.getActiveEntryPoint()
         }
     }
-
     /**
      * "Домой": раньше это было два отдельных шага (сначала "Стоп" —
      * остановка записи, потом отдельно "Домой" — включение возврата).
@@ -56,7 +48,6 @@ class MapViewModel(
             _mode.value = TrackingMode.RETURNING
         }
     }
-
     fun onArrivedConfirmed() {
         viewModelScope.launch {
             repository.confirmArrivedHome()
@@ -65,7 +56,6 @@ class MapViewModel(
             _activeEntryPoint.value = null
         }
     }
-
     /** Вызывается после отмены восстановления трека (диалог краш-recovery) —
      * состояние в БД/prefs уже сброшено репозиторием, здесь синхронизируем UI. */
     fun resetToIdleState() {
@@ -73,7 +63,6 @@ class MapViewModel(
         _distanceMeters.value = 0f
         _activeEntryPoint.value = null
     }
-
     /** Вызывается при возврате на карту — активная точка и режим могли
      * измениться в другом экране (например, выбор точки входа переводит
      * в режим "Домой" — см. решение по ТЗ). */
@@ -83,7 +72,6 @@ class MapViewModel(
             _activeEntryPoint.value = repository.getActiveEntryPoint()
         }
     }
-
     class Factory(private val app: TrailBackApp) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

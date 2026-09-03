@@ -1,5 +1,4 @@
 package com.trailback.app.ui.map
-
 import android.content.Context
 import android.graphics.Bitmap as AndroidBitmapType
 import android.graphics.Canvas as AndroidCanvasType
@@ -34,7 +33,6 @@ import org.mapsforge.map.reader.MapFile
 import org.mapsforge.map.rendertheme.InternalRenderTheme
 import java.io.File
 import kotlin.math.abs
-
 /**
  * Инкапсулирует работу с Mapsforge: если офлайн-карта выбрана — рендерит её
  * тайлы; если нет ни офлайн-карты, ни интернета — показывает серую заглушку,
@@ -47,18 +45,15 @@ class MapController(
     private var mapView: MapView? = null
     private var tileRendererLayer: TileRendererLayer? = null
     private var tileDownloadLayer: TileDownloadLayer? = null
-
     private var trackPolyline: Polyline? = null
     private var homeLinePolyline: Polyline? = null
     private var userPositionMarker: Marker? = null
     private var accuracyCircle: Circle? = null
     private var entryPointMarker: Marker? = null
     private val markedPlaceMarkers = mutableListOf<Marker>()
-
     private var lastMarkerHeading: Float? = null
     private val density = context.resources.displayMetrics.density
     private val markerSizePx: Int = (MARKER_SIZE_DP * density).toInt()
-
     /**
      * Следящий режим: пока включён, карта центрируется на каждое обновление
      * геопозиции (пользователь реально идёт). Отключается автоматически при
@@ -69,11 +64,9 @@ class MapController(
     private val entryPointDateFormat = java.text.SimpleDateFormat(
         "dd.MMM. H:mm", java.util.Locale.getDefault()
     )
-
     init {
         AndroidGraphicFactory.createInstance(context.applicationContext as android.app.Application)
     }
-
     /**
      * КРИТИЧНО: копирование файла офлайн-карты (может весить сотни МБ)
      * раньше выполнялось СИНХРОННО на вызывающем потоке — а вызывалось это
@@ -106,9 +99,7 @@ class MapController(
         markedPlaceMarkers.clear()
         lastMarkerHeading = null
         followModeEnabled = true
-
         container.removeAllViews()
-
         if (offlineMapsUri != null) {
             // Показываем заглушку сразу — пока в фоне может идти копирование
             // большого файла карты, пользователь не видит зависший экран.
@@ -122,14 +113,12 @@ class MapController(
             // Офлайн-карта не найдена/не читается — пробуем онлайн или заглушку.
             container.removeAllViews()
         }
-
         if (hasInternet) {
             showOnlineMap()
         } else {
             showPlaceholder()
         }
     }
-
     /**
      * Выполняется на Dispatchers.IO (см. вызывающий код). Пропускает
      * повторное копирование, если в кэше уже лежит файл с тем же именем и
@@ -142,12 +131,10 @@ class MapController(
             val documentFile = DocumentFile.fromTreeUri(context, treeUri) ?: return null
             val mapDoc = documentFile.listFiles().firstOrNull { it.name?.endsWith(".map") == true }
                 ?: return null
-
             val cacheFile = File(context.cacheDir, mapDoc.name ?: "offline.map")
             if (cacheFile.exists() && cacheFile.length() == mapDoc.length()) {
                 return cacheFile
             }
-
             context.contentResolver.openInputStream(mapDoc.uri)?.use { input ->
                 cacheFile.outputStream().use { output -> input.copyTo(output) }
             }
@@ -156,12 +143,10 @@ class MapController(
             null
         }
     }
-
     private fun showOfflineMap(mapFile: File) {
         val newMapView = MapView(context)
         newMapView.setBuiltInZoomControls(false)
         newMapView.mapScaleBar.isVisible = true
-
         val tileCache: TileCache = AndroidUtil.createTileCache(
             context,
             "offline_tiles",
@@ -169,7 +154,6 @@ class MapController(
             1f,
             newMapView.model.frameBufferModel.overdrawFactor
         )
-
         val mapDataStore: MapDataStore = MapFile(mapFile)
         val layer = AndroidUtil.createTileRendererLayer(
             tileCache,
@@ -184,7 +168,6 @@ class MapController(
         newMapView.model.mapViewPosition.zoomLevelMin = ZOOM_LEVEL_MIN
         newMapView.model.mapViewPosition.zoomLevelMax = ZOOM_LEVEL_MAX
         newMapView.model.mapViewPosition.zoomLevel = DEFAULT_ZOOM_LEVEL
-
         tileRendererLayer = layer
         mapView = newMapView
         attachManualPanDetector(newMapView)
@@ -192,7 +175,6 @@ class MapController(
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
         ))
     }
-
     /**
      * Онлайн-тайлы через OpenStreetMap Mapnik — простая, бесплатная,
      * некоммерческая карта без спутниковых снимков (см. решение по ТЗ:
@@ -203,10 +185,8 @@ class MapController(
         val newMapView = MapView(context)
         newMapView.setBuiltInZoomControls(false)
         newMapView.mapScaleBar.isVisible = true
-
         val tileSource = OpenStreetMapMapnik.INSTANCE
         tileSource.userAgent = context.packageName
-
         val tileCache: TileCache = AndroidUtil.createTileCache(
             context,
             "online_tiles",
@@ -214,7 +194,6 @@ class MapController(
             1f,
             newMapView.model.frameBufferModel.overdrawFactor
         )
-
         val downloadLayer = TileDownloadLayer(
             tileCache,
             newMapView.model.mapViewPosition,
@@ -225,7 +204,6 @@ class MapController(
         newMapView.model.mapViewPosition.zoomLevelMin = ZOOM_LEVEL_MIN
         newMapView.model.mapViewPosition.zoomLevelMax = ZOOM_LEVEL_MAX_ONLINE
         newMapView.model.mapViewPosition.zoomLevel = DEFAULT_ZOOM_LEVEL
-
         tileDownloadLayer = downloadLayer
         mapView = newMapView
         attachManualPanDetector(newMapView)
@@ -233,7 +211,6 @@ class MapController(
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
         ))
     }
-
     /**
      * Любое касание карты пользователем (пан, зум жестом, простой тап)
      * отключает следящий режим — дальше карта не будет "убегать" обратно
@@ -249,7 +226,6 @@ class MapController(
             false
         }
     }
-
     private fun showPlaceholder() {
         val placeholder = View(context).apply {
             setBackgroundColor(Color.parseColor("#3A3A3A"))
@@ -258,7 +234,6 @@ class MapController(
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
         ))
     }
-
     /**
      * Сплошная чёрная линия трека толщиной 4dp, только пока идёт запись.
      * ВАЖНО: без явного paint.setStyle(Style.STROKE) полилиния не рисуется —
@@ -274,9 +249,7 @@ class MapController(
     fun updateTrackLine(points: List<TrackPoint>, mode: TrackingMode) {
         val mapView = this.mapView ?: return
         trackPolyline?.let { mapView.layerManager.layers.remove(it) }
-
         if (mode != TrackingMode.RECORDING || points.size < 2) return
-
         val paintStroke = AndroidGraphicFactory.INSTANCE.createPaint().apply {
             setStyle(Style.STROKE)
             color = 0xFF000000.toInt()
@@ -285,11 +258,9 @@ class MapController(
         val polyline = Polyline(paintStroke, AndroidGraphicFactory.INSTANCE)
         val rawLatLongs = points.map { LatLong(it.latitude, it.longitude) }
         smoothTrackPoints(rawLatLongs).forEach { polyline.latLongs.add(it) }
-
         mapView.layerManager.layers.add(polyline)
         trackPolyline = polyline
     }
-
     /**
      * Сглаживание Catmull-Rom: между каждой парой реальных точек вставляет
      * несколько промежуточных, рассчитанных по кривой через 4 соседние
@@ -299,10 +270,8 @@ class MapController(
      */
     private fun smoothTrackPoints(points: List<LatLong>): List<LatLong> {
         if (points.size < 3) return points
-
         val padded = listOf(points.first()) + points + listOf(points.last())
         val result = mutableListOf<LatLong>()
-
         for (i in 0 until padded.size - 3) {
             val p0 = padded[i]
             val p1 = padded[i + 1]
@@ -316,11 +285,9 @@ class MapController(
         result.add(points.last())
         return result
     }
-
     private fun catmullRomPoint(p0: LatLong, p1: LatLong, p2: LatLong, p3: LatLong, t: Float): LatLong {
         val t2 = t * t
         val t3 = t2 * t
-
         fun interpolate(v0: Double, v1: Double, v2: Double, v3: Double): Double {
             return 0.5 * (
                 (2 * v1) +
@@ -329,12 +296,10 @@ class MapController(
                 (-v0 + 3 * v1 - 3 * v2 + v3) * t3
             )
         }
-
         val lat = interpolate(p0.latitude, p1.latitude, p2.latitude, p3.latitude)
         val lon = interpolate(p0.longitude, p1.longitude, p2.longitude, p3.longitude)
         return LatLong(lat, lon)
     }
-
     /**
      * Пунктирная линия от текущей позиции до точки старта — серая в обычном
      * режиме, акцентная и толще в режиме "Домой".
@@ -342,10 +307,8 @@ class MapController(
     fun updateHomeLine(current: Location?, entryPoint: EntryPoint?, mode: TrackingMode) {
         val mapView = this.mapView ?: return
         homeLinePolyline?.let { mapView.layerManager.layers.remove(it) }
-
         if (current == null || entryPoint == null) return
         if (mode == TrackingMode.IDLE) return
-
         val isReturning = mode == TrackingMode.RETURNING
         val paintStroke = AndroidGraphicFactory.INSTANCE.createPaint().apply {
             setStyle(Style.STROKE)
@@ -356,11 +319,9 @@ class MapController(
         val polyline = Polyline(paintStroke, AndroidGraphicFactory.INSTANCE)
         polyline.latLongs.add(LatLong(current.latitude, current.longitude))
         polyline.latLongs.add(LatLong(entryPoint.latitude, entryPoint.longitude))
-
         mapView.layerManager.layers.add(polyline)
         homeLinePolyline = polyline
     }
-
     /**
      * Значок положения пользователя — стрелка размером 1.5x от исходного
      * (48dp вместо 32dp), поворачивается по курсу устройства. Обновляется
@@ -370,16 +331,12 @@ class MapController(
     fun updateUserPositionMarker(location: Location?, headingDegrees: Float) {
         val mapView = this.mapView ?: return
         if (location == null) return
-
         updateAccuracyCircle(mapView, location)
-
         val previousHeading = lastMarkerHeading
         val headingChanged = previousHeading == null || angularDifference(previousHeading, headingDegrees) > 3f
-
         if (userPositionMarker == null || headingChanged) {
             val bitmap = createRotatedMarkerBitmap(R.drawable.ic_user_position, markerSizePx, headingDegrees)
             bitmap.incrementRefCount()
-
             if (userPositionMarker == null) {
                 val marker = Marker(LatLong(location.latitude, location.longitude), bitmap, 0, 0)
                 mapView.layerManager.layers.add(marker)
@@ -395,7 +352,6 @@ class MapController(
         } else {
             userPositionMarker?.setLatLong(LatLong(location.latitude, location.longitude))
         }
-
         // Следящий режим (п.1 решения): пока пользователь не трогал карту
         // руками, она сама едет за его реальным перемещением. Как только он
         // коснулся карты (пан/зум/тап), followModeEnabled=false и центр
@@ -405,7 +361,6 @@ class MapController(
             mapView.model.mapViewPosition.center = LatLong(location.latitude, location.longitude)
         }
     }
-
     /**
      * Визуализация точности позиционирования — полупрозрачный круг вокруг
      * маркера радиусом location.accuracy (в метрах), как принято в
@@ -431,14 +386,12 @@ class MapController(
             existing.setRadius(radiusMeters)
         }
     }
-
     private val accuracyFillPaint by lazy {
         AndroidGraphicFactory.INSTANCE.createPaint().apply {
             setStyle(Style.FILL)
             color = 0x33E65100.toInt() // акцентный цвет приложения, ~20% непрозрачности
         }
     }
-
     private val accuracyStrokePaint by lazy {
         AndroidGraphicFactory.INSTANCE.createPaint().apply {
             setStyle(Style.STROKE)
@@ -446,13 +399,11 @@ class MapController(
             strokeWidth = 1.5f * density
         }
     }
-
     private fun angularDifference(a: Float, b: Float): Float {
         var diff = abs(a - b) % 360f
         if (diff > 180f) diff = 360f - diff
         return diff
     }
-
     /** Рисует drawable повёрнутым на заданный угол в квадратный битмап нужного размера. */
     private fun createRotatedMarkerBitmap(drawableRes: Int, sizePx: Int, rotationDegrees: Float): org.mapsforge.core.graphics.Bitmap {
         val drawable = ContextCompat.getDrawable(context, drawableRes)
@@ -463,20 +414,17 @@ class MapController(
         drawable?.setBounds(0, 0, sizePx, sizePx)
         drawable?.draw(canvas)
         canvas.restore()
-
         val mapsforgeBitmap = AndroidGraphicFactory.INSTANCE.createBitmap(sizePx, sizePx, true)
         val targetAndroidBitmap = AndroidGraphicFactory.getBitmap(mapsforgeBitmap)
         AndroidCanvasType(targetAndroidBitmap).drawBitmap(androidBitmap, 0f, 0f, null)
         androidBitmap.recycle()
         return mapsforgeBitmap
     }
-
     /** Булавка с подписью названия сверху для каждого отмеченного места. */
     fun updateMarkedPlaces(places: List<MarkedPlace>) {
         val mapView = this.mapView ?: return
         markedPlaceMarkers.forEach { mapView.layerManager.layers.remove(it) }
         markedPlaceMarkers.clear()
-
         val pinSizePx = (36 * density).toInt()
         places.forEach { place ->
             val bitmap = createLabeledIconBitmap(R.drawable.ic_marked_place_pin, pinSizePx, place.name)
@@ -491,7 +439,6 @@ class MapController(
             markedPlaceMarkers.add(marker)
         }
     }
-
     /**
      * Векторный читаемый крестик на точке входа с подписью даты создания
      * (например "27.авг. 7:40") — см. решение по ТЗ.
@@ -500,25 +447,20 @@ class MapController(
         val mapView = this.mapView ?: return
         entryPointMarker?.let { mapView.layerManager.layers.remove(it) }
         entryPointMarker = null
-
         if (entryPoint == null) return
-
         val dateLabel = entryPointDateFormat.format(java.util.Date(entryPoint.timestamp))
         val crossSizePx = (32 * density).toInt()
         val bitmap = createLabeledIconBitmap(R.drawable.ic_entry_point_marker, crossSizePx, dateLabel)
         bitmap.incrementRefCount()
-
         val marker = Marker(
             LatLong(entryPoint.latitude, entryPoint.longitude), bitmap, 0, -bitmap.height / 2
         )
         mapView.layerManager.layers.add(marker)
         entryPointMarker = marker
     }
-
     /** Рисует подпись текстом сверху и значок снизу в одном битмапе. */
     private fun createLabeledIconBitmap(iconRes: Int, iconSizePx: Int, label: String): org.mapsforge.core.graphics.Bitmap {
         val iconDrawable = ContextCompat.getDrawable(context, iconRes)
-
         val textPaint = android.graphics.Paint().apply {
             isAntiAlias = true
             color = android.graphics.Color.WHITE
@@ -526,71 +468,56 @@ class MapController(
             textAlign = android.graphics.Paint.Align.CENTER
             setShadowLayer(3f * density, 0f, 0f, android.graphics.Color.BLACK)
         }
-
         val textWidth = textPaint.measureText(label)
         val horizontalPadding = 8f * density
         val canvasWidth = maxOf(iconSizePx.toFloat(), textWidth + horizontalPadding * 2).toInt()
-
         val textMetrics = textPaint.fontMetrics
         val textHeight = (textMetrics.descent - textMetrics.ascent)
         val textGap = 2f * density
         val totalHeight = (textHeight + textGap + iconSizePx).toInt()
-
         val androidBitmap = AndroidBitmapType.createBitmap(canvasWidth, totalHeight, AndroidBitmapType.Config.ARGB_8888)
         val canvas = AndroidCanvasType(androidBitmap)
-
         canvas.drawText(label, canvasWidth / 2f, -textMetrics.ascent, textPaint)
-
         val iconLeft = (canvasWidth - iconSizePx) / 2
         val iconTop = (textHeight + textGap).toInt()
         iconDrawable?.setBounds(iconLeft, iconTop, iconLeft + iconSizePx, iconTop + iconSizePx)
         iconDrawable?.draw(canvas)
-
         val mapsforgeBitmap = AndroidGraphicFactory.INSTANCE.createBitmap(canvasWidth, totalHeight, true)
         val targetAndroidBitmap = AndroidGraphicFactory.getBitmap(mapsforgeBitmap)
         AndroidCanvasType(targetAndroidBitmap).drawBitmap(androidBitmap, 0f, 0f, null)
         androidBitmap.recycle()
         return mapsforgeBitmap
     }
-
     fun canZoomIn(): Boolean {
         val position = mapView?.model?.mapViewPosition ?: return false
         return position.zoomLevel < position.zoomLevelMax
     }
-
     fun canZoomOut(): Boolean {
         val position = mapView?.model?.mapViewPosition ?: return false
         return position.zoomLevel > position.zoomLevelMin
     }
-
     fun zoomIn() {
         val position = mapView?.model?.mapViewPosition ?: return
         if (position.zoomLevel < position.zoomLevelMax) position.zoomIn()
     }
-
     fun zoomOut() {
         val position = mapView?.model?.mapViewPosition ?: return
         if (position.zoomLevel > position.zoomLevelMin) position.zoomOut()
     }
-
     fun recenterOn(location: Location?) {
         location ?: return
         followModeEnabled = true
         mapView?.model?.mapViewPosition?.center = LatLong(location.latitude, location.longitude)
     }
-
     fun onDestroy() {
         tileRendererLayer?.let { it.mapDataStore.close() }
         tileDownloadLayer?.onDestroy()
         mapView?.destroyAll()
         AndroidGraphicFactory.clearResourceMemoryCache()
     }
-
     companion object {
         private const val ACCENT_COLOR_MAPSFORGE = 0xFFE65100.toInt()
-
         private const val ZOOM_LEVEL_MIN: Byte = 2
-
         // Сколько промежуточных точек генерируется на один отрезок трека при
         // сглаживании Catmull-Rom. Больше — плавнее кривая, но больше точек
         // на длинных маршрутах (влияет на нагрузку перерисовки при частых
@@ -599,7 +526,6 @@ class MapController(
         private const val ZOOM_LEVEL_MAX: Byte = 20
         private const val ZOOM_LEVEL_MAX_ONLINE: Byte = 18
         private const val DEFAULT_ZOOM_LEVEL: Byte = 15
-
         // 1.5x от исходных 32dp (см. решение по ТЗ)
         private const val MARKER_SIZE_DP = 48
     }

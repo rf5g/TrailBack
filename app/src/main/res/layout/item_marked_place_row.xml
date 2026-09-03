@@ -5,7 +5,6 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp">
-
     <TextView
         android:id="@+id/nameText"
         android:layout_width="match_parent"
@@ -14,7 +13,6 @@
         android:textSize="16sp"
         android:textStyle="bold"
         tools:text="Грибное место" />
-
     <TextView
         android:id="@+id/coordinatesText"
         android:layout_width="match_parent"
@@ -22,13 +20,11 @@
         android:textColor="@color/text_gray"
         android:textSize="13sp"
         tools:text="55.75222, 37.61556" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_marginTop="8dp">
-
         <Button
             android:id="@+id/openInNavigationButton"
             android:layout_width="0dp"
@@ -36,7 +32,6 @@
             android:layout_weight="1"
             android:text="@string/open_in_navigation_app"
             style="@style/Widget.MaterialComponents.Button.TextButton" />
-
         <Button
             android:id="@+id/copyButton"
             android:layout_width="0dp"
@@ -44,7 +39,6 @@
             android:layout_weight="1"
             android:text="@string/copy_coordinates"
             style="@style/Widget.MaterialComponents.Button.TextButton" />
-
         <ImageButton
             android:id="@+id/deleteButton"
             android:layout_width="40dp"
@@ -52,5 +46,4 @@
             android:src="@drawable/ic_delete"
             android:background="?attr/selectableItemBackgroundBorderless" />
     </LinearLayout>
-
 </LinearLayout>

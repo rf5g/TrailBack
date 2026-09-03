@@ -1,5 +1,4 @@
 package com.trailback.app.service
-
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -9,7 +8,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.trailback.app.R
 import com.trailback.app.ui.map.MapActivity
-
 /**
  * Уведомления (пересмотрено по решению — не заваливать пользователя
  * отдельными всплывающими уведомлениями на каждое действие):
@@ -21,9 +19,7 @@ import com.trailback.app.ui.map.MapActivity
  *   если приложение свёрнуто — если открыто, диалог показывает сама Activity).
  */
 class NotificationHelper(private val context: Context) {
-
     private val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
     init {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
@@ -42,7 +38,6 @@ class NotificationHelper(private val context: Context) {
             )
         }
     }
-
     /** Постоянное foreground-уведомление сервиса (обязательное системное требование). */
     fun buildForegroundNotification(contentText: String): android.app.Notification {
         val openAppIntent = PendingIntent.getActivity(
@@ -58,7 +53,6 @@ class NotificationHelper(private val context: Context) {
             .setOngoing(true)
             .build()
     }
-
     /**
      * Обновляет текст уже показанного постоянного уведомления (та же
      * ID = FOREGROUND_NOTIFICATION_ID) — пользователь видит смену статуса
@@ -68,7 +62,6 @@ class NotificationHelper(private val context: Context) {
     fun updateForegroundStatus(contentText: String) {
         manager.notify(FOREGROUND_NOTIFICATION_ID, buildForegroundNotification(contentText))
     }
-
     /** Показывается, только если приложение свёрнуто — тап открывает диалог подтверждения. */
     fun notifyArrivedHome() {
         val openAppIntent = PendingIntent.getActivity(
@@ -88,12 +81,10 @@ class NotificationHelper(private val context: Context) {
             .build()
         manager.notify(ID_ARRIVED, notification)
     }
-
     companion object {
         const val CHANNEL_TRACKING = "tracking_channel"
         const val CHANNEL_ALERTS = "alerts_channel"
         const val FOREGROUND_NOTIFICATION_ID = 1001
-
         private const val ID_ARRIVED = 1004
     }
 }

@@ -1,5 +1,4 @@
 package com.trailback.app.ui.map
-
 import android.Manifest
 import android.content.ComponentName
 import android.content.Context
@@ -36,14 +35,11 @@ import com.google.android.gms.location.Priority
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-
 class MapActivity : AppCompatActivity() {
-
     companion object {
         const val ACTION_SHOW_ARRIVED_DIALOG = "com.trailback.app.SHOW_ARRIVED_DIALOG"
         const val LOW_ACCURACY_THRESHOLD_METERS = 50f
     }
-
     private lateinit var binding: ActivityMapBinding
     private lateinit var viewModel: MapViewModel
     private lateinit var mapController: MapController
@@ -55,7 +51,6 @@ class MapActivity : AppCompatActivity() {
     private var lastAppliedOfflineMapsUri: String? = null
     private var serviceObserverJob: kotlinx.coroutines.Job? = null
     private lateinit var infoPanelController: InfoPanelController
-
     // Собственный лёгкий запрос геопозиции для отображения на карте и
     // кнопки "Старт", пока экран открыт — НЕЗАВИСИМО от фонового сервиса.
     // Сервис теперь не опрашивает GPS в IDLE/STOPPED (экономия батареи,
@@ -72,19 +67,16 @@ class MapActivity : AppCompatActivity() {
             onLocationUpdated(location)
         }
     }
-
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
             val service = (binder as TrackingService.LocalBinder).getService()
             trackingService = service
             observeService(service)
         }
-
         override fun onServiceDisconnected(name: ComponentName) {
             trackingService = null
         }
     }
-
     private val requestLocationPermission = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { grants ->
@@ -93,45 +85,44 @@ class MapActivity : AppCompatActivity() {
             startTrackingServiceIfNeeded()
         }
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMapBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         val app = application as TrailBackApp
         viewModel = ViewModelProvider(this, MapViewModel.Factory(app))[MapViewModel::class.java]
         mapController = MapController(this, binding.mapContainer)
         lastAppliedOfflineMapsUri = app.settingsStore.offlineMapsUri
         lifecycleScope.launch {
             mapController.setupMap(lastAppliedOfflineMapsUri, hasInternetConnection())
+            // Пересчёт состояния зум-кнопок ПОСЛЕ готовности mapView — иначе
+            // при офлайн-карте (реальная suspend-точка на Dispatchers.IO)
+            // canZoomIn()/canZoomOut() читают ещё null mapView и кнопки
+            // навсегда остаются disabled/полупрозрачными (баг: кнопки
+            // недоступны только когда загружена офлайн-карта).
+            updateZoomButtonsState()
         }
-
         compassSensorManager = CompassSensorManager(this) { heading ->
             currentHeading = heading
             binding.miniCompassView.headingDegrees = heading
         }
         compassSensorManager.northMode = app.settingsStore.northMode
         infoPanelController = InfoPanelController(this, binding.topInfoPanel)
-
         checkCrashRecoveryThenStart(app)
         setupButtons()
         setupMapControlButtons()
         observeViewModel()
         handleArrivalIntent(intent)
     }
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleArrivalIntent(intent)
     }
-
     private fun handleArrivalIntent(intent: Intent?) {
         if (intent?.action == ACTION_SHOW_ARRIVED_DIALOG) {
             showArrivedDialog()
         }
     }
-
     override fun onStart() {
         super.onStart()
         Intent(this, TrackingService::class.java).also { intent ->
@@ -139,7 +130,6 @@ class MapActivity : AppCompatActivity() {
             isServiceBound = true
         }
     }
-
     override fun onResume() {
         super.onResume()
         compassSensorManager.start()
@@ -148,14 +138,12 @@ class MapActivity : AppCompatActivity() {
         reapplyOfflineMapIfChanged()
         startForegroundOnlyLocationUpdates()
     }
-
     override fun onPause() {
         compassSensorManager.stop()
         infoPanelController.stop()
         foregroundLocationClient.removeLocationUpdates(foregroundLocationCallback)
         super.onPause()
     }
-
     /**
      * Лёгкий запрос геопозиции, активный только пока экран открыт (item 4) —
      * компенсирует то, что фоновый сервис больше не опрашивает GPS в
@@ -172,7 +160,6 @@ class MapActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
         ) return
-
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5_000L).build()
         try {
             foregroundLocationClient.requestLocationUpdates(request, foregroundLocationCallback, mainLooper)
@@ -180,7 +167,6 @@ class MapActivity : AppCompatActivity() {
             // Разрешение не выдано — просто не запускаем обновления.
         }
     }
-
     /**
      * Раньше выбор офлайн-карты в настройках применялся только после полного
      * перезапуска приложения — MapController.setupMap() вызывался лишь один
@@ -194,10 +180,10 @@ class MapActivity : AppCompatActivity() {
             lastAppliedOfflineMapsUri = currentUri
             lifecycleScope.launch {
                 mapController.setupMap(currentUri, hasInternetConnection())
+                updateZoomButtonsState() // та же гонка, что и в onCreate()
             }
         }
     }
-
     override fun onStop() {
         serviceObserverJob?.cancel()
         serviceObserverJob = null
@@ -207,19 +193,16 @@ class MapActivity : AppCompatActivity() {
         }
         super.onStop()
     }
-
     override fun onDestroy() {
         mapController.onDestroy()
         super.onDestroy()
     }
-
     private fun hasInternetConnection(): Boolean {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
-
     /**
      * КРИТИЧНО: отменяем предыдущую подписку перед созданием новой.
      * onServiceConnected() срабатывает заново на каждый bindService()
@@ -247,14 +230,11 @@ class MapActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun onLocationUpdated(location: Location) {
         mapController.updateUserPositionMarker(location, currentHeading)
         val entryPoint = viewModel.activeEntryPoint.value
         mapController.updateHomeLine(location, entryPoint, viewModel.mode.value)
-
         infoPanelController.updateDistanceToDestination(location, entryPoint)
-
         // Счётчик пути (п.6): TrackingService копит дистанцию в
         // TrackingStateStore напрямую (не через ViewModel), поэтому UI
         // синхронизируется с реальным значением на каждый тик геопозиции,
@@ -263,7 +243,6 @@ class MapActivity : AppCompatActivity() {
             infoPanelController.updateRouteCounter()
         }
     }
-
     private fun setupMapControlButtons() {
         binding.zoomInButton.setOnClickListener {
             mapController.zoomIn()
@@ -276,19 +255,16 @@ class MapActivity : AppCompatActivity() {
         binding.recenterButton.setOnClickListener { mapController.recenterOn(lastKnownLocation) }
         updateZoomButtonsState()
     }
-
     private fun updateZoomButtonsState() {
         binding.zoomInButton.isEnabled = mapController.canZoomIn()
         binding.zoomOutButton.isEnabled = mapController.canZoomOut()
         binding.zoomInButton.alpha = if (binding.zoomInButton.isEnabled) 1f else 0.4f
         binding.zoomOutButton.alpha = if (binding.zoomOutButton.isEnabled) 1f else 0.4f
     }
-
     private fun ensurePermissionsAndStartService() {
         val fineGranted = ContextCompat.checkSelfPermission(
             this, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-
         if (fineGranted) {
             startTrackingServiceIfNeeded()
         } else {
@@ -302,31 +278,26 @@ class MapActivity : AppCompatActivity() {
             requestLocationPermission.launch(permissions.toTypedArray())
         }
     }
-
     private fun startTrackingServiceIfNeeded() {
         val intent = Intent(this, TrackingService::class.java)
         ContextCompat.startForegroundService(this, intent)
     }
-
     private fun checkCrashRecoveryThenStart(app: TrailBackApp) {
         val mode = app.trackingStateStore.mode
         val isActiveMode = mode == TrackingMode.RECORDING || mode == TrackingMode.RETURNING
         val serviceAlreadyRunning = isServiceRunning(TrackingService::class.java)
-
         // Диалог восстановления нужен, только если процесс/сервис реально
         // погибли (краш) — при обычном сворачивании foreground-сервис жив,
         // и повторно спрашивать пользователя не нужно.
         val needsRecoveryPrompt = isActiveMode &&
             !serviceAlreadyRunning &&
             app.trackingStateStore.hasRecoverableTrack(System.currentTimeMillis())
-
         if (needsRecoveryPrompt) {
             showRecoveryDialog(app)
         } else {
             ensurePermissionsAndStartService()
         }
     }
-
     private fun showRecoveryDialog(app: TrailBackApp) {
         AlertDialog.Builder(this)
             .setTitle(R.string.recovery_dialog_title)
@@ -344,22 +315,18 @@ class MapActivity : AppCompatActivity() {
             }
             .show()
     }
-
     private fun isServiceRunning(serviceClass: Class<*>): Boolean {
         val manager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
         @Suppress("DEPRECATION")
         return manager.getRunningServices(Int.MAX_VALUE).any { it.service.className == serviceClass.name }
     }
-
     private fun setupButtons() {
         binding.menuButton.setOnClickListener {
             startActivity(Intent(this, MenuActivity::class.java))
         }
-
         binding.miniCompassView.setOnClickListener {
             startActivity(Intent(this, CompassActivity::class.java))
         }
-
         binding.mainActionButton.setOnClickListener {
             when (viewModel.mode.value) {
                 TrackingMode.IDLE -> confirmStart()
@@ -367,12 +334,10 @@ class MapActivity : AppCompatActivity() {
                 TrackingMode.RETURNING -> confirmManualArrival()
             }
         }
-
         binding.quickMarkButton.setOnClickListener {
             showMarkPlaceDialog()
         }
     }
-
     private fun confirmStart() {
         val location = lastKnownLocation
         if (location != null && location.accuracy > LOW_ACCURACY_THRESHOLD_METERS) {
@@ -385,7 +350,6 @@ class MapActivity : AppCompatActivity() {
             showStartConfirmDialog()
         }
     }
-
     private fun showStartConfirmDialog() {
         AlertDialog.Builder(this)
             .setTitle(R.string.confirm_start_title)
@@ -398,7 +362,6 @@ class MapActivity : AppCompatActivity() {
             .setNegativeButton(R.string.arrived_dialog_no, null)
             .show()
     }
-
     private fun confirmHome() {
         AlertDialog.Builder(this)
             .setTitle(R.string.confirm_home_title)
@@ -409,7 +372,6 @@ class MapActivity : AppCompatActivity() {
             .setNegativeButton(R.string.arrived_dialog_no, null)
             .show()
     }
-
     /**
      * Ручное подтверждение через объединённую кнопку (п.3): два РАЗНЫХ
      * диалога подряд, а не троекратное повторение одного и того же — сперва
@@ -424,7 +386,6 @@ class MapActivity : AppCompatActivity() {
             .setNegativeButton(R.string.arrived_dialog_no, null)
             .show()
     }
-
     private fun confirmManualArrivalReset() {
         AlertDialog.Builder(this)
             .setMessage(R.string.manual_arrival_reset_confirm_message)
@@ -436,7 +397,6 @@ class MapActivity : AppCompatActivity() {
             .setNegativeButton(R.string.arrived_dialog_no, null)
             .show()
     }
-
     private fun showArrivedDialog() {
         AlertDialog.Builder(this)
             .setTitle(R.string.arrived_dialog_title)
@@ -452,7 +412,6 @@ class MapActivity : AppCompatActivity() {
             }
             .show()
     }
-
     private fun showMarkPlaceDialog() {
         val input = androidx.appcompat.widget.AppCompatEditText(this)
         AlertDialog.Builder(this)
@@ -478,7 +437,6 @@ class MapActivity : AppCompatActivity() {
             .setNegativeButton(R.string.arrived_dialog_no, null)
             .show()
     }
-
     private fun observeViewModel() {
         lifecycleScope.launch {
             viewModel.mode.collect { mode ->
@@ -524,7 +482,6 @@ class MapActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun updateButtonForMode(mode: TrackingMode) {
         binding.mainActionButton.text = when (mode) {
             TrackingMode.IDLE -> getString(R.string.button_start)
@@ -532,5 +489,4 @@ class MapActivity : AppCompatActivity() {
             TrackingMode.RETURNING -> getString(R.string.manual_arrival_button)
         }
     }
-
 }

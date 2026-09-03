@@ -2,7 +2,6 @@
 <resources>
     <string name="app_name">ТропаДомой</string>
     <string name="app_tagline">Возвращатель грибника</string>
-
     <string name="button_start">СТАРТ</string>
     <string name="button_stop">СТОП</string>
     <string name="button_home">ДОМОЙ</string>
@@ -14,13 +13,12 @@
     <string name="low_accuracy_warning">Точность спутников низкая (&gt;50 м). Продолжить?</string>
     <string name="confirm_start_title">Начать запись маршрута?</string>
     <string name="confirm_home_title">Остановить запись и включить режим возврата?</string>
-
     <string name="arrived_dialog_title">Вы вернулись!</string>
     <string name="arrived_dialog_message">Вы действительно достигли точки старта?</string>
     <string name="arrived_dialog_yes">Да</string>
     <string name="arrived_dialog_no">Нет</string>
     <string name="manual_arrival_button">Я на месте</string>
-
+    <string name="compass_warning">Компас может врать — доверяйте на свой риск. Калибруйте чаще: вращайте телефон «восьмёркой».</string>
     <string name="notification_channel_tracking">Запись маршрута</string>
     <string name="notification_channel_alerts">Уведомления</string>
     <string name="tracking_notification_idle">Готово</string>
@@ -31,45 +29,52 @@
     <string name="notification_returning_title">Включён режим возврата</string>
     <string name="notification_returning_text">Следуйте по стрелке к точке старта</string>
     <string name="notification_arrived_title">Вы вернулись!</string>
-
     <string name="menu_entry_points">Сохранённые точки входа</string>
     <string name="menu_marked_places">Отмеченные места</string>
     <string name="menu_compass">Компас, указатель направления</string>
     <string name="menu_compass_settings">Настройки компаса</string>
     <string name="menu_offline_maps">Офлайн карты</string>
     <string name="menu_calibration">Калибровка</string>
-    <string name="menu_info">Информация</string>
+    <string name="menu_info">О приложении</string>
     <string name="menu_language">Язык</string>
-
     <string name="north_mode_true">Истинный север</string>
     <string name="north_mode_magnetic">Магнитный север</string>
-
     <string name="clear_entry_points_warning_1">Удалить все точки входа?</string>
     <string name="clear_entry_points_warning_2">Вы уверены?</string>
     <string name="clear_entry_points_warning_3">Это опасное действие, его нельзя отменить!</string>
-
     <string name="mark_place_dialog_title">Отметить это место</string>
     <string name="mark_place_hint">Введите название</string>
-
     <string name="calibration_instructions_title">Калибровка компаса</string>
     <string name="calibration_instructions_text">Несколько раз повращайте телефон восьмёркой, чтобы улучшить точность компаса.</string>
-
     <string name="open_in_navigation_app">Открыть в навигационном приложении</string>
     <string name="copy_coordinates">Скопировать координаты</string>
     <string name="coordinates_copied">Координаты скопированы</string>
-
     <string name="recovery_dialog_title">Обнаружен незавершённый маршрут</string>
     <string name="recovery_dialog_message">Приложение было закрыто во время записи маршрута. Продолжить запись с того места, где она прервалась?</string>
     <string name="recovery_dialog_continue">Продолжить</string>
     <string name="recovery_dialog_cancel">Отменить</string>
-
     <string name="select_entry_point_title">Выбрать эту точку?</string>
     <string name="select_entry_point_locked_in_returning">Нельзя сменить точку в активном режиме "Домой"</string>
     <string name="entry_point_set_active">Точка установлена как активная</string>
-
     <string name="menu_exit">Выход</string>
     <string name="exit_confirm_message">Вы уверены, что хотите выйти из приложения?</string>
     <string name="exit_locked_in_returning">Нельзя выйти из приложения в активном режиме "Домой"</string>
-
     <string name="manual_arrival_reset_confirm_message">Вы уверены? Режим возврата на начальную точку будет сброшен!</string>
+    <!-- Экран "О приложении" -->
+    <string name="about_intro">Надёжный инструмент для навигации в лесу, разработанный специально для работы в условиях полного отсутствия интернета и сотовой связи. Приложение помогает зафиксировать точку входа (например, место парковки машины или просеку) и безошибочно вернуться к ней.</string>
+    <string name="about_maps_title">🗺️ Офлайн-карты</string>
+    <string name="about_maps_body">Приложение использует быстрые и лёгкие карты формата Mapsforge, которые работают на 100% автономно. Вам не нужен интернет в лесу — все картографические данные хранятся прямо в памяти телефона. Подробную инструкцию, ссылки на файлы и информацию о том, как и где бесплатно скачать карты для вашего региона, вы найдёте на соседнем экране — «Офлайн-карты».</string>
+    <string name="about_modes_title">🔄 Три режима работы (алгоритм «одной кнопки»)</string>
+    <string name="about_mode_start_title">[ СТАРТ ] — Начало пути</string>
+    <string name="about_mode_start_body">Нажмите эту кнопку на опушке леса перед тем, как зайти в чащу. Приложение включит GPS, зафиксирует точные координаты вашей точки входа и начнёт строить маршрут на карте. Теперь можно убирать телефон в карман и спокойно собирать грибы.</string>
+    <string name="about_mode_home_title">[ ДОМОЙ ] — Режим возвращения</string>
+    <string name="about_mode_home_body">Когда решите закончить поход, нажмите кнопку «Домой». Экран переключится в режим навигации. На циферблате компаса появится большая красная стрелка. Как бы вы ни крутили телефон, она всегда указывает точное направление на точку входа. Просто идите туда, куда она смотрит.</string>
+    <string name="about_mode_arrived_title">[ Я НА МЕСТЕ ] — Завершение похода</string>
+    <string name="about_mode_arrived_body">Когда выйдете из леса и вернётесь к исходной точке, нажмите эту кнопку. Приложение поймёт, что задача выполнена, остановит работу GPS для экономии батареи и сбросит маршрут, подготовив кнопку к новому путешествию.</string>
+    <string name="about_compass_title">🧭 Как устроен компас (два слоя)</string>
+    <string name="about_compass_body">Нижний слой (циферблат) показывает стороны света и может работать в магнитном или истинном режиме — по вашему выбору. Верхний слой (красная стрелка) появляется только в режиме «Домой». Она рассчитывает азимут между вашей текущей геопозицией и сохранённой точкой старта. Шкала компаса крутится вслед за вашими поворотами, но красная стрелка удерживает направление на цель.</string>
+    <string name="about_warning_title">⚠️ Важное предупреждение</string>
+    <string name="about_warning_body">Электронный компас любого смартфона подвержен электромагнитным помехам (магнитные чехлы, линии электропередач, подземные залежи руды) и может временно «залипать» или неверно определять направление. Ваша безопасность — ваша ответственность. Используя приложение в диких условиях, вы берёте все риски на себя. Всегда берите в глухой лес механический компас, полностью заряженный пауэрбанк и спички.</string>
+    <string name="about_calibration_tip_title">💡 Совет по калибровке</string>
+    <string name="about_calibration_tip_body">Чтобы компас не врал, регулярно калибруйте датчики телефона. Поднимите устройство и плавно опишите им в воздухе цифру «8» (знак бесконечности), одновременно вращая смартфон в горизонтальной плоскости. Делайте это перед входом в лес и периодически во время движения.</string>
 </resources>

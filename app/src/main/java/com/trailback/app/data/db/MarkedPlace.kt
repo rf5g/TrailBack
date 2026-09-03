@@ -1,8 +1,6 @@
 package com.trailback.app.data.db
-
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-
 /**
  * Место, отмеченное пользователем кнопкой быстрой отметки.
  * Название — произвольный текст, который вводит сам пользователь;

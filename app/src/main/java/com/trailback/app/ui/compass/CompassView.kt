@@ -1,5 +1,4 @@
 package com.trailback.app.ui.compass
-
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -8,7 +7,6 @@ import android.graphics.Path
 import android.util.AttributeSet
 import android.view.View
 import com.trailback.app.R
-
 /**
  * Полноэкранный компас (п.6.2 ТЗ), реализующий подтверждённую механику:
  * - вращающийся диск (градусы + буквы N/E/S/W или С/Ю/З/В) — угол = -heading;
@@ -21,16 +19,12 @@ class CompassView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
-
     enum class Mode { NORMAL, RETURNING }
-
     var mode: Mode = Mode.NORMAL
         set(value) { field = value; invalidate() }
-
     /** Текущий курс устройства, градусы 0..360. */
     var headingDegrees: Float = 0f
         set(value) { field = value; invalidate() }
-
     /**
      * Финальный угол поворота стрелки на экране (уже с учётом курса и
      * повторного сглаживания перехода через 0°/360° — см. CompassActivity).
@@ -38,9 +32,7 @@ class CompassView @JvmOverloads constructor(
      */
     var arrowScreenAngleDegrees: Float = 0f
         set(value) { field = value; invalidate() }
-
     private val isRussian = context.resources.configuration.locales[0].language == "ru"
-
     private val dialPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.DKGRAY
         style = Paint.Style.STROKE
@@ -78,30 +70,24 @@ class CompassView @JvmOverloads constructor(
         color = Color.argb(160, 139, 0, 0)
         style = Paint.Style.FILL
     }
-
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val cx = width / 2f
         val cy = height / 2f
         val radius = minOf(width, height) / 2f * 0.85f
-
         canvas.save()
         canvas.rotate(-headingDegrees, cx, cy)
         drawDial(canvas, cx, cy, radius)
         canvas.restore()
-
         drawFixedCourseTriangle(canvas, cx, cy, radius)
-
         if (mode == Mode.NORMAL) {
             drawCenterHeadingText(canvas, cx, cy)
         } else {
             drawHomeArrow(canvas, cx, cy, radius)
         }
     }
-
     private fun drawDial(canvas: Canvas, cx: Float, cy: Float, radius: Float) {
         canvas.drawCircle(cx, cy, radius, dialPaint)
-
         for (deg in 0 until 360 step 10) {
             val angleRad = Math.toRadians((deg - 90).toDouble())
             val outer = radius
@@ -112,7 +98,6 @@ class CompassView @JvmOverloads constructor(
             val y2 = cy + (inner * Math.sin(angleRad)).toFloat()
             canvas.drawLine(x1, y1, x2, y2, tickPaint)
         }
-
         val labels = if (isRussian) listOf("С", "В", "Ю", "З") else listOf("N", "E", "S", "W")
         val labelAngles = listOf(0, 90, 180, 270)
         for (i in labelAngles.indices) {
@@ -126,7 +111,6 @@ class CompassView @JvmOverloads constructor(
             canvas.restore()
         }
     }
-
     private fun drawFixedCourseTriangle(canvas: Canvas, cx: Float, cy: Float, radius: Float) {
         val path = Path().apply {
             moveTo(cx, cy - radius - 10f)
@@ -136,17 +120,14 @@ class CompassView @JvmOverloads constructor(
         }
         canvas.drawPath(path, courseTrianglePaint)
     }
-
     private fun drawCenterHeadingText(canvas: Canvas, cx: Float, cy: Float) {
         val roundedHeading = ((headingDegrees + 0.5f).toInt()) % 360
         canvas.drawText(roundedHeading.toString(), cx, cy, headingTextPaint)
         canvas.drawText(compassPointLabel(headingDegrees), cx, cy + 80f, subLabelPaint)
     }
-
     private fun drawHomeArrow(canvas: Canvas, cx: Float, cy: Float, radius: Float) {
         canvas.save()
         canvas.rotate(arrowScreenAngleDegrees, cx, cy)
-
         val length = radius * 0.75f
         val width = radius * 0.35f
         val path = Path().apply {
@@ -160,7 +141,6 @@ class CompassView @JvmOverloads constructor(
         canvas.drawPath(path, homeArrowPaint)
         canvas.restore()
     }
-
     private fun compassPointLabel(heading: Float): String {
         val pointsRu = listOf("С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ")
         val pointsEn = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
@@ -168,7 +148,6 @@ class CompassView @JvmOverloads constructor(
         val index = (((heading + 22.5f) / 45f).toInt()) % 8
         return points[index]
     }
-
     companion object {
         private const val ACCENT_COLOR = 0xFFE65100.toInt()
     }

@@ -1,5 +1,4 @@
 package com.trailback.app.ui.common
-
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -13,7 +12,6 @@ import com.trailback.app.TrailBackApp
 import com.trailback.app.data.db.EntryPoint
 import com.trailback.app.databinding.ViewTopInfoPanelBinding
 import com.trailback.app.util.DistanceFormatter
-
 /**
  * Общая логика обновления панели с метрами и спутниками — используется и на
  * экране карты, и на экране компаса (панель дублируется на обоих экранах
@@ -41,7 +39,6 @@ class InfoPanelController(
                 activity.getString(R.string.satellites_label, gpsCount, glonassCount)
         }
     }
-
     /** Вызывать из onResume() вызывающего экрана. */
     fun start() {
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -50,20 +47,17 @@ class InfoPanelController(
         val locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         locationManager.registerGnssStatusCallback(gnssStatusCallback, null)
     }
-
     /** Вызывать из onPause() вызывающего экрана. */
     fun stop() {
         val locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         locationManager.unregisterGnssStatusCallback(gnssStatusCallback)
     }
-
     /** Счётчик пути — единый источник правды: stateStore.distanceMeters. */
     fun updateRouteCounter() {
         val app = activity.application as TrailBackApp
         panel.distanceTraveledText.text =
             DistanceFormatter.format(app.trackingStateStore.distanceMeters)
     }
-
     /** Дистанция до цели — актуальна только когда цель задана (режим "Домой"). */
     fun updateDistanceToDestination(current: Location, target: EntryPoint?) {
         if (target == null) {
@@ -78,7 +72,6 @@ class InfoPanelController(
         )
         panel.distanceToHomeText.text = DistanceFormatter.format(distanceResult[0])
     }
-
     fun clearDistanceToDestination() {
         panel.distanceToHomeText.text = ""
     }

@@ -4,14 +4,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_dark">
-
     <include
         android:id="@+id/topInfoPanel"
         layout="@layout/view_top_info_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent" />
-
     <com.trailback.app.ui.compass.CompassView
         android:id="@+id/compassView"
         android:layout_width="0dp"
@@ -22,5 +20,21 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-
+    <!-- Предупреждение о точности компаса: наложено поверх нижнего поля
+         compassView (margin=24dp), НЕ участвует в его констрейнтах —
+         размер и позиция самого компаса не меняются. -->
+    <TextView
+        android:id="@+id/compassWarningText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:gravity="center"
+        android:textSize="12sp"
+        android:textColor="#636363"
+        android:text="@string/compass_warning"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>
