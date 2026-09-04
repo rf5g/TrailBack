@@ -32,16 +32,17 @@ class CompassActivity : AppCompatActivity() {
     private var currentHeadingDegrees: Float = 0f
     private var locationObserverJob: kotlinx.coroutines.Job? = null
     // Повторное EMA-сглаживание ИТОГОВОГО угла стрелки (азимут минус курс).
-    // Нужно отдельно от сглаживания курса в CompassSensorManager: GPS-азимут
-    // на точку старта приходит рывками (координаты "прилетают" пакетами), и
-    // разностный угол (bearing - heading) может заново давать скачок через
-    // 0°/360°, даже если сам курс телефона уже сглажен.
+    // Нужно отдельно от курса телефона (там фильтр убран — см. решение по
+    // CompassSensorManager): GPS-азимут на точку старта приходит рывками
+    // (координаты "прилетают" пакетами), и разностный угол (bearing -
+    // heading) может заново давать скачок через 0°/360°, даже когда сам
+    // курс телефона уже стабилен. Этот слой НЕ трогаем — он решает другую
+    // задачу (сглаживание GPS-джиттера, а не шума датчика ориентации).
     private var smoothedArrowSin: Float? = null
     private var smoothedArrowCos: Float? = null
     // Взводится при каждом onResume — на первом валидном кадре после сна/
     // разблокировки стрелка на дом встаёт мгновенно, без "доплывания" из
-    // замороженной за время паузы позиции (тот же класс бага, что и в
-    // CompassSensorManager, см. решение по нему).
+    // замороженной за время паузы позиции.
     private var isFirstArrowFrame = true
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
@@ -169,8 +170,8 @@ class CompassActivity : AppCompatActivity() {
             trueBearing
         }
         if (adjustedBearing.isNaN()) return
-        val bearingDeg = (adjustedBearing + 360f) % 360f
-        val rawArrowAngleDeg = (bearingDeg - currentHeadingDegrees + 360f) % 360f
+        val bearingDeg = AzimuthNormalizer.normalize(adjustedBearing)
+        val rawArrowAngleDeg = AzimuthNormalizer.normalize(bearingDeg - currentHeadingDegrees)
         val rawArrowAngleRad = Math.toRadians(rawArrowAngleDeg.toDouble())
         val rawSin = sin(rawArrowAngleRad).toFloat()
         val rawCos = cos(rawArrowAngleRad).toFloat()
@@ -192,12 +193,12 @@ class CompassActivity : AppCompatActivity() {
         smoothedArrowCos = newCos
         val smoothedArrowRad = atan2(newSin, newCos)
         var smoothedArrowDeg = Math.toDegrees(smoothedArrowRad.toDouble()).toFloat()
-        smoothedArrowDeg = (smoothedArrowDeg + 360f) % 360f
+        smoothedArrowDeg = AzimuthNormalizer.normalize(smoothedArrowDeg)
         binding.compassView.arrowScreenAngleDegrees = smoothedArrowDeg
     }
     companion object {
-        // Те же веса, что и для сглаживания курса в CompassSensorManager —
-        // единообразное поведение для обоих слоёв сглаживания.
+        // Веса EMA только для второго слоя (стрелка на точку старта) —
+        // курс устройства теперь берётся из CompassSensorManager без фильтра.
         private const val EMA_OLD_WEIGHT = 0.92f
         private const val EMA_NEW_WEIGHT = 0.08f
     }

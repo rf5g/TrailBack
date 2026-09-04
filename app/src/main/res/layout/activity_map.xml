@@ -39,7 +39,7 @@
     <ImageButton
         android:id="@+id/menuButton"
         style="@style/SquareIconButton"
-        android:src="@drawable/ic_menu"
+        android:src="@drawable/ic_dehaze"
         app:layout_constraintVertical_chainStyle="spread_inside"
         app:layout_constraintTop_toBottomOf="@id/topInfoPanel"
         app:layout_constraintBottom_toTopOf="@id/quickMarkButton"
@@ -47,7 +47,7 @@
     <ImageButton
         android:id="@+id/quickMarkButton"
         style="@style/SquareIconButton"
-        android:src="@drawable/ic_flag"
+        android:src="@drawable/ic_add_location"
         app:layout_constraintTop_toBottomOf="@id/menuButton"
         app:layout_constraintBottom_toTopOf="@id/topButtonSpacer"
         app:layout_constraintEnd_toEndOf="parent" />

@@ -22,7 +22,8 @@
         app:layout_constraintEnd_toEndOf="parent" />
     <!-- Предупреждение о точности компаса: наложено поверх нижнего поля
          compassView (margin=24dp), НЕ участвует в его констрейнтах —
-         размер и позиция самого компаса не меняются. -->
+         размер и позиция самого компаса не меняются. Цвет #999999,
+         шрифт 16sp — см. решение по ТЗ. -->
     <TextView
         android:id="@+id/compassWarningText"
         android:layout_width="wrap_content"
@@ -31,8 +32,8 @@
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:gravity="center"
-        android:textSize="12sp"
-        android:textColor="#636363"
+        android:textSize="16sp"
+        android:textColor="#999999"
         android:text="@string/compass_warning"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

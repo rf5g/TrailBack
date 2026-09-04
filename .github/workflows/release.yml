@@ -26,12 +26,12 @@ jobs:
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.jks
       - name: Write keystore.properties
         run: |
-          cat > keystore.properties << EOF
+          cat > keystore.properties << EOF2
           storeFile=${{ github.workspace }}/release.jks
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
-          EOF
+          EOF2
       - name: Build release AAB
         run: ./gradlew bundleRelease
       - name: Build release APK
