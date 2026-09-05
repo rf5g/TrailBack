@@ -30,10 +30,17 @@ class TrackingService : LifecycleService() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var notificationHelper: NotificationHelper
     private val arrivalDetector = HomeArrivalDetector()
+    // НОВОЕ: "взятие направления" — отдельный, независимый от режима "Домой"
+    // детектор прибытия. Та же логика (радиус + серия фиксов + точность),
+    // что и в HomeArrivalDetector, но со своим состоянием, т.к. цель
+    // навигации может быть активна ОДНОВРЕМЕННО с RECORDING/IDLE.
+    private val directionArrivalDetector = HomeArrivalDetector()
     private val _currentLocation = MutableStateFlow<Location?>(null)
     val currentLocation: StateFlow<Location?> = _currentLocation.asStateFlow()
     private val _arrivedHomeEvent = MutableStateFlow(false)
     val arrivedHomeEvent: StateFlow<Boolean> = _arrivedHomeEvent.asStateFlow()
+    private val _directionArrivedEvent = MutableStateFlow(false)
+    val directionArrivedEvent: StateFlow<Boolean> = _directionArrivedEvent.asStateFlow()
     private val binder = LocalBinder()
     inner class LocalBinder : android.os.Binder() {
         fun getService(): TrackingService = this@TrackingService
@@ -91,6 +98,24 @@ class TrackingService : LifecycleService() {
             arrivalDetector.onDialogDismissed(System.currentTimeMillis())
         }
     }
+    // === НОВОЕ: "взятие направления" ===
+    /** Вызывается из MapActivity сразу после установки/отмены цели навигации
+     * (TrackingRepository.setNavigationTarget/clearNavigationTarget) — нужно,
+     * чтобы пересчитать опрос GPS: включить его, если сейчас IDLE, но цель
+     * уже активна (иначе компас не получит координаты, см. решение по ТЗ). */
+    fun onNavigationTargetChanged(active: Boolean) {
+        if (!active) {
+            directionArrivalDetector.reset()
+        }
+        val app = application as TrailBackApp
+        startLocationUpdates(app.trackingStateStore.mode)
+    }
+    fun onDirectionArrivalDialogDismissed(confirmed: Boolean) {
+        _directionArrivedEvent.value = false
+        if (!confirmed) {
+            directionArrivalDetector.onDialogDismissed(System.currentTimeMillis())
+        }
+    }
     /**
      * Экономия батареи (см. решение по ТЗ): в режиме IDLE нет ни активного
      * маршрута, ни активного возврата — фоновый опрос GPS с
@@ -104,12 +129,20 @@ class TrackingService : LifecycleService() {
      */
     private fun startLocationUpdates(mode: TrackingMode) {
         fusedLocationClient.removeLocationUpdates(locationCallback)
-        if (mode == TrackingMode.IDLE) {
+        // НОВОЕ: "взятие направления" может быть активно, даже когда
+        // TrackingMode == IDLE (пользователь не начинал маршрут, просто
+        // отметил точку на карте) — без этого условия GPS не опрашивался бы
+        // вовсе, и компас/линия на карте не получали бы координаты.
+        val app = application as TrailBackApp
+        val navigationTargetActive = app.trackingStateStore.navigationTargetActive
+        if (mode == TrackingMode.IDLE && !navigationTargetActive) {
             return
         }
         val intervalMillis = if (mode == TrackingMode.RECORDING) {
             RECORDING_INTERVAL_MILLIS
         } else {
+            // Тот же интервал 10с и для RETURNING, и для IDLE+navigationTarget
+            // (экономия батареи одинаково уместна в обоих случаях).
             RETURNING_INTERVAL_MILLIS
         }
         val minDistanceMeters = if (mode == TrackingMode.RECORDING) RECORDING_MIN_DISTANCE_METERS else 0f
@@ -145,6 +178,20 @@ class TrackingService : LifecycleService() {
                     }
                 }
                 TrackingMode.IDLE -> Unit
+            }
+            // НОВОЕ: проверка прибытия к цели "взятия направления" — ВНЕ
+            // when(mode) выше, т.к. это независимое, ортогональное состояние
+            // (может быть активно одновременно с RECORDING или IDLE).
+            if (stateStore.navigationTargetActive) {
+                val shouldPromptDirection = directionArrivalDetector.onLocationUpdate(
+                    location,
+                    stateStore.navigationTargetLatitude,
+                    stateStore.navigationTargetLongitude,
+                    System.currentTimeMillis()
+                )
+                if (shouldPromptDirection) {
+                    _directionArrivedEvent.value = true
+                }
             }
         }
     }

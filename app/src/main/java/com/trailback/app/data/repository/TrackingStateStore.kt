@@ -41,6 +41,24 @@ class TrackingStateStore(context: Context) {
             putLong(KEY_LAST_UPDATE, 0L)
         }
     }
+    // === НОВОЕ: "взятие направления" ===
+    // Независимое от TrackingMode состояние (см. решение по ТЗ) — может быть
+    // активно одновременно с RECORDING или IDLE. При входе в RETURNING
+    // (кнопка "Домой") принудительно отменяется — см. TrackingRepository.
+    // Не участвует в 72-часовой логике восстановления трека — это не
+    // маршрут, а разовая точка, поэтому отдельного окна давности не нужно.
+    var navigationTargetActive: Boolean
+        get() = prefs.getBoolean(KEY_NAV_TARGET_ACTIVE, false)
+        set(value) = prefs.edit { putBoolean(KEY_NAV_TARGET_ACTIVE, value) }
+    var navigationTargetLatitude: Double
+        get() = java.lang.Double.longBitsToDouble(prefs.getLong(KEY_NAV_TARGET_LAT, 0L))
+        set(value) = prefs.edit { putLong(KEY_NAV_TARGET_LAT, java.lang.Double.doubleToLongBits(value)) }
+    var navigationTargetLongitude: Double
+        get() = java.lang.Double.longBitsToDouble(prefs.getLong(KEY_NAV_TARGET_LON, 0L))
+        set(value) = prefs.edit { putLong(KEY_NAV_TARGET_LON, java.lang.Double.doubleToLongBits(value)) }
+    fun clearNavigationTarget() {
+        prefs.edit { putBoolean(KEY_NAV_TARGET_ACTIVE, false) }
+    }
     /**
      * true, если есть незавершённый трек в допустимом окне восстановления (72 ч).
      * Восстанавливаются только состояния RECORDING (идёт запись) и RETURNING
@@ -59,6 +77,10 @@ class TrackingStateStore(context: Context) {
         private const val KEY_DISTANCE = "distance_meters"
         private const val KEY_LAST_LAT = "last_lat"
         private const val KEY_LAST_LON = "last_lon"
+        // НОВОЕ: "взятие направления"
+        private const val KEY_NAV_TARGET_ACTIVE = "nav_target_active"
+        private const val KEY_NAV_TARGET_LAT = "nav_target_lat"
+        private const val KEY_NAV_TARGET_LON = "nav_target_lon"
         const val RECOVERY_WINDOW_MILLIS = 72L * 60 * 60 * 1000 // 72 часа
     }
 }

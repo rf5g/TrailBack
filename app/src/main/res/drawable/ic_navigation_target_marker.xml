@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp" android:height="36dp" android:viewportWidth="36" android:viewportHeight="36">
+    <!-- Бирюзовый прицел/цель — маркер "взятия направления", отличается по
+         форме и цвету от красного крестика точки входа и оранжевой булавки
+         отмеченного места. -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:pathData="M18,18m-11,0a11,11 0,1 1,22 0a11,11 0,1 1,-22 0"/>
+    <path
+        android:strokeColor="#40E0D0"
+        android:strokeWidth="3"
+        android:pathData="M18,18m-11,0a11,11 0,1 1,22 0a11,11 0,1 1,-22 0"/>
+    <path
+        android:strokeColor="#40E0D0"
+        android:strokeWidth="3"
+        android:pathData="M18,3L18,10M18,26L18,33M3,18L10,18M26,18L33,18"/>
+    <path android:fillColor="#40E0D0" android:pathData="M18,18m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+</vector>

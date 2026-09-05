@@ -64,6 +64,21 @@ class TrackingRepository(
     suspend fun enterReturningMode() {
         stateStore.mode = TrackingMode.RETURNING
         stateStore.lastUpdateTimestamp = System.currentTimeMillis()
+        // НОВОЕ: "Домой" всегда главнее "взятия направления" — по решению
+        // отменяем произвольную цель и переключаем стрелку на точку входа.
+        stateStore.clearNavigationTarget()
+    }
+    // === НОВОЕ: "взятие направления" ===
+    /** Долгий тап на карте → "Взять направление сюда". Независимо от
+     * TrackingMode (может работать одновременно с RECORDING). */
+    suspend fun setNavigationTarget(latitude: Double, longitude: Double) {
+        stateStore.navigationTargetLatitude = latitude
+        stateStore.navigationTargetLongitude = longitude
+        stateStore.navigationTargetActive = true
+    }
+    /** Отмена вручную (кнопка) или после подтверждения прибытия к цели. */
+    suspend fun clearNavigationTarget() {
+        stateStore.clearNavigationTarget()
     }
     /** Подтверждено "Вы вернулись!" — полный сброс в исходное состояние. */
     suspend fun confirmArrivedHome() {

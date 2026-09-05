@@ -60,6 +60,13 @@
     <string name="exit_confirm_message">Вы уверены, что хотите выйти из приложения?</string>
     <string name="exit_locked_in_returning">Нельзя выйти из приложения в активном режиме "Домой"</string>
     <string name="manual_arrival_reset_confirm_message">Вы уверены? Режим возврата на начальную точку будет сброшен!</string>
+    <!-- НОВОЕ: "Взятие направления" (долгий тап на карте) -->
+    <string name="long_press_dialog_title">Что сделать с этой точкой?</string>
+    <string name="long_press_save_place">Сохранить в отмеченные места</string>
+    <string name="long_press_take_direction">Взять направление сюда</string>
+    <string name="cancel_direction_confirm_message">Отменить взятие направления?</string>
+    <string name="direction_arrived_dialog_title">Вы пришли!</string>
+    <string name="direction_arrived_dialog_message">Вы достигли выбранной точки?</string>
     <!-- Экран "О приложении" -->
     <string name="about_intro">Надёжный инструмент для навигации в лесу, разработанный специально для работы в условиях полного отсутствия интернета и сотовой связи. Приложение помогает зафиксировать точку входа (например, место парковки машины или просеку) и безошибочно вернуться к ней.</string>
     <string name="about_maps_title">🗺️ Офлайн-карты</string>

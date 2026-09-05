@@ -17,4 +17,6 @@
     <color name="info_panel_label">#2A2A2A</color>
     <color name="counter_black">#000000</color>
     <color name="counter_red">#C62828</color>
+    <!-- НОВОЕ: "взятие направления" — стрелка компаса и линия/маркер на карте -->
+    <color name="direction_turquoise">#40E0D0</color>
 </resources>

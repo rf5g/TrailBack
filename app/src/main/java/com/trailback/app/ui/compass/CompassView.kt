@@ -19,7 +19,10 @@ class CompassView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
-    enum class Mode { NORMAL, RETURNING }
+    // DIRECTION — НОВОЕ: "взятие направления" (см. решение по ТЗ). Рисуется
+    // тем же drawHomeArrow(), что и RETURNING, отличие только в цвете
+    // стрелки (arrowAccentColor) — сам режим "Домой" не меняется.
+    enum class Mode { NORMAL, RETURNING, DIRECTION }
     var mode: Mode = Mode.NORMAL
         set(value) { field = value; invalidate() }
     /** Текущий курс устройства, градусы 0..360. */
@@ -32,6 +35,10 @@ class CompassView @JvmOverloads constructor(
      */
     var arrowScreenAngleDegrees: Float = 0f
         set(value) { field = value; invalidate() }
+    // НОВОЕ: цвет стрелки настраиваемый — оранжевый по умолчанию ("Домой"),
+    // бирюзовый для DIRECTION ("взятие направления"), см. CompassActivity.
+    var arrowAccentColor: Int = ACCENT_COLOR
+        set(value) { field = value; homeArrowPaint.color = value; invalidate() }
     private val isRussian = context.resources.configuration.locales[0].language == "ru"
     private val dialPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.DKGRAY

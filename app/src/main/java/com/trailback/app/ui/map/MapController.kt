@@ -5,6 +5,8 @@ import android.graphics.Canvas as AndroidCanvasType
 import android.graphics.Color
 import android.location.Location
 import android.net.Uri
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
@@ -50,6 +52,13 @@ class MapController(
     private var userPositionMarker: Marker? = null
     private var accuracyCircle: Circle? = null
     private var entryPointMarker: Marker? = null
+    // НОВОЕ: "взятие направления" — независимые от точки входа маркер и
+    // пунктирная линия (см. решение по ТЗ), живут своим циклом.
+    private var navigationTargetMarker: Marker? = null
+    private var navigationTargetLine: Polyline? = null
+    /** Вызывается при долгом тапе по карте с экранными координатами тапа —
+     * MapActivity сам решает, что показать (диалог выбора действия). */
+    var onLongPress: ((screenX: Float, screenY: Float) -> Unit)? = null
     private val markedPlaceMarkers = mutableListOf<Marker>()
     private var lastMarkerHeading: Float? = null
     private val density = context.resources.displayMetrics.density
@@ -98,6 +107,8 @@ class MapController(
         userPositionMarker = null
         accuracyCircle = null
         entryPointMarker = null
+        navigationTargetMarker = null // НОВОЕ
+        navigationTargetLine = null // НОВОЕ
         markedPlaceMarkers.clear()
         lastMarkerHeading = null
         followModeEnabled = true
@@ -220,11 +231,25 @@ class MapController(
      * потребляет (return false), чтобы Mapsforge продолжал штатно
      * обрабатывать сами жесты.
      */
+    // НОВОЕ: GestureDetector для долгого тапа ("взятие направления"/
+    // "сохранить место") — заведён в ОДИН OnTouchListener вместе со старой
+    // логикой отключения следящего режима, т.к. setOnTouchListener на View
+    // всегда ПЕРЕЗАПИСЫВАЕТ предыдущий листенер, второй вызов был бы
+    // невозможен. Возврат false в обоих случаях сохранён — иначе Mapsforge
+    // перестанет обрабатывать собственные жесты (пан/зум).
+    private val longPressGestureDetector by lazy {
+        GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onLongPress(e: MotionEvent) {
+                onLongPress?.invoke(e.x, e.y)
+            }
+        })
+    }
     private fun attachManualPanDetector(mapView: MapView) {
         mapView.setOnTouchListener { _, event ->
-            if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                 followModeEnabled = false
             }
+            longPressGestureDetector.onTouchEvent(event)
             false
         }
     }
@@ -490,6 +515,55 @@ class MapController(
         androidBitmap.recycle()
         return mapsforgeBitmap
     }
+    // === НОВОЕ: "взятие направления" ===
+    /**
+     * Переводит экранные координаты долгого тапа в географические.
+     * ВНИМАНИЕ: имя метода API у Mapsforge может отличаться между версиями
+     * библиотеки — в 0.20.0 ожидается MapView.mapViewProjection.fromPixels().
+     * Если сборка не пройдёт именно на этой строке — это единственное
+     * место, которое нужно поправить под точную сигнатуру установленной
+     * версии org.mapsforge:mapsforge-map-android.
+     */
+    fun screenToLatLong(screenX: Float, screenY: Float): Pair<Double, Double>? {
+        val projected = mapView?.mapViewProjection?.fromPixels(screenX.toDouble(), screenY.toDouble())
+            ?: return null
+        return projected.latitude to projected.longitude
+    }
+    /** Пунктирная бирюзовая линия от текущей позиции до цели навигации —
+     * независима от homeLinePolyline, рисуется одновременно с ней. */
+    fun updateNavigationTargetLine(current: Location?, target: Pair<Double, Double>?) {
+        val mapView = this.mapView ?: return
+        navigationTargetLine?.let { mapView.layerManager.layers.remove(it) }
+        navigationTargetLine = null
+        if (current == null || target == null) return
+        val paintStroke = AndroidGraphicFactory.INSTANCE.createPaint().apply {
+            setStyle(Style.STROKE)
+            color = NAVIGATION_TARGET_COLOR
+            strokeWidth = 6f * density
+            setDashPathEffect(floatArrayOf(12f * density, 8f * density))
+        }
+        val polyline = Polyline(paintStroke, AndroidGraphicFactory.INSTANCE)
+        polyline.latLongs.add(LatLong(current.latitude, current.longitude))
+        polyline.latLongs.add(LatLong(target.first, target.second))
+        mapView.layerManager.layers.add(polyline)
+        navigationTargetLine = polyline
+    }
+    /** Маркер цели навигации — отдельная бирюзовая иконка, не связана с
+     * маркером точки входа или отмеченных мест. */
+    fun updateNavigationTargetMarker(target: Pair<Double, Double>?) {
+        val mapView = this.mapView ?: return
+        navigationTargetMarker?.let { mapView.layerManager.layers.remove(it) }
+        navigationTargetMarker = null
+        if (target == null) return
+        val pinSizePx = (36 * density).toInt()
+        // Поворот 0° — createRotatedMarkerBitmap здесь используется просто
+        // как готовый helper "нарисовать drawable в битмап нужного размера".
+        val bitmap = createRotatedMarkerBitmap(R.drawable.ic_navigation_target_marker, pinSizePx, 0f)
+        bitmap.incrementRefCount()
+        val marker = Marker(LatLong(target.first, target.second), bitmap, 0, 0)
+        mapView.layerManager.layers.add(marker)
+        navigationTargetMarker = marker
+    }
     fun canZoomIn(): Boolean {
         val position = mapView?.model?.mapViewPosition ?: return false
         return position.zoomLevel < position.zoomLevelMax
@@ -519,6 +593,9 @@ class MapController(
     }
     companion object {
         private const val ACCENT_COLOR_MAPSFORGE = 0xFFE65100.toInt()
+        // НОВОЕ: цвет для "взятия направления" — бирюзовый, чтобы визуально
+        // не путать с оранжевой линией/стрелкой режима "Домой".
+        private const val NAVIGATION_TARGET_COLOR = 0xFF40E0D0.toInt()
         private const val ZOOM_LEVEL_MIN: Byte = 2
         // Сколько промежуточных точек генерируется на один отрезок трека при
         // сглаживании Catmull-Rom. Больше — плавнее кривая, но больше точек

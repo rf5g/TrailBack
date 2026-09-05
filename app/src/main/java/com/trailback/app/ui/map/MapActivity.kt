@@ -47,6 +47,11 @@ class MapActivity : AppCompatActivity() {
     private var trackingService: TrackingService? = null
     private var isServiceBound = false
     private var lastKnownLocation: Location? = null
+    // НОВОЕ: "взятие направления" — координаты активной цели (см. решение
+    // по ТЗ), null если не активна. Читается/пишется напрямую в
+    // TrackingStateStore через TrackingRepository, это поле — локальный
+    // кэш для UI (видимость кнопки отмены, линия/маркер на карте).
+    private var navigationTarget: Pair<Double, Double>? = null
     private var currentHeading: Float = 0f
     private var lastAppliedOfflineMapsUri: String? = null
     private var serviceObserverJob: kotlinx.coroutines.Job? = null
@@ -101,6 +106,7 @@ class MapActivity : AppCompatActivity() {
             // навсегда остаются disabled/полупрозрачными (баг: кнопки
             // недоступны только когда загружена офлайн-карта).
             updateZoomButtonsState()
+            refreshNavigationTargetUi() // НОВОЕ — та же гонка: mapView пересоздан, маркер цели нужно перерисовать
         }
         compassSensorManager = CompassSensorManager(this) { heading ->
             currentHeading = heading
@@ -113,6 +119,12 @@ class MapActivity : AppCompatActivity() {
         setupMapControlButtons()
         observeViewModel()
         handleArrivalIntent(intent)
+        // НОВОЕ: "взятие направления" — долгий тап в любом месте карты,
+        // независимо от текущего TrackingMode (см. решение по ТЗ).
+        mapController.onLongPress = { x, y ->
+            mapController.screenToLatLong(x, y)?.let { (lat, lon) -> showLongPressActionDialog(lat, lon) }
+        }
+        refreshNavigationTargetUi()
     }
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -137,6 +149,7 @@ class MapActivity : AppCompatActivity() {
         viewModel.refreshActiveEntryPoint()
         reapplyOfflineMapIfChanged()
         startForegroundOnlyLocationUpdates()
+        refreshNavigationTargetUi() // НОВОЕ
     }
     override fun onPause() {
         compassSensorManager.stop()
@@ -181,6 +194,7 @@ class MapActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 mapController.setupMap(currentUri, hasInternetConnection())
                 updateZoomButtonsState() // та же гонка, что и в onCreate()
+                refreshNavigationTargetUi() // НОВОЕ
             }
         }
     }
@@ -228,12 +242,19 @@ class MapActivity : AppCompatActivity() {
                     if (shouldShow) showArrivedDialog()
                 }
             }
+            // НОВОЕ: "взятие направления" — независимое событие прибытия.
+            launch {
+                service.directionArrivedEvent.collect { shouldShow ->
+                    if (shouldShow) showDirectionArrivedDialog()
+                }
+            }
         }
     }
     private fun onLocationUpdated(location: Location) {
         mapController.updateUserPositionMarker(location, currentHeading)
         val entryPoint = viewModel.activeEntryPoint.value
         mapController.updateHomeLine(location, entryPoint, viewModel.mode.value)
+        mapController.updateNavigationTargetLine(location, navigationTarget) // НОВОЕ
         infoPanelController.updateDistanceToDestination(location, entryPoint)
         // Счётчик пути (п.6): TrackingService копит дистанцию в
         // TrackingStateStore напрямую (не через ViewModel), поэтому UI
@@ -337,6 +358,11 @@ class MapActivity : AppCompatActivity() {
         binding.quickMarkButton.setOnClickListener {
             showMarkPlaceDialog()
         }
+        // НОВОЕ: кнопка видна только когда navigationTarget != null
+        // (см. refreshNavigationTargetUi).
+        binding.cancelDirectionButton.setOnClickListener {
+            confirmCancelNavigationTarget()
+        }
     }
     private fun confirmStart() {
         val location = lastKnownLocation
@@ -436,6 +462,115 @@ class MapActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.arrived_dialog_no, null)
             .show()
+    }
+    // === НОВОЕ: "взятие направления" (долгий тап на карте) ===
+    /** Точка входа в фичу — вызывается из mapController.onLongPress. Работает
+     * в любом TrackingMode (см. решение по ТЗ), диалог не завязан на режим. */
+    private fun showLongPressActionDialog(latitude: Double, longitude: Double) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.long_press_dialog_title)
+            .setItems(
+                arrayOf(
+                    getString(R.string.long_press_save_place),
+                    getString(R.string.long_press_take_direction)
+                )
+            ) { _, which ->
+                when (which) {
+                    0 -> showSavePlaceAtDialog(latitude, longitude)
+                    1 -> takeDirectionTo(latitude, longitude)
+                }
+            }
+            .setNegativeButton(R.string.arrived_dialog_no, null)
+            .show()
+    }
+    /** Тот же флоу, что и showMarkPlaceDialog(), но координаты берутся из
+     * места долгого тапа, а не из текущей геопозиции пользователя. */
+    private fun showSavePlaceAtDialog(latitude: Double, longitude: Double) {
+        val input = androidx.appcompat.widget.AppCompatEditText(this)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.mark_place_dialog_title)
+            .setView(input)
+            .setPositiveButton(R.string.arrived_dialog_yes) { _, _ ->
+                val name = input.text?.toString()?.trim().orEmpty()
+                if (name.isNotEmpty()) {
+                    val app = application as TrailBackApp
+                    lifecycleScope.launch {
+                        app.database.markedPlaceDao().insert(
+                            com.trailback.app.data.db.MarkedPlace(
+                                name = name,
+                                latitude = latitude,
+                                longitude = longitude,
+                                timestamp = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                }
+            }
+            .setNegativeButton(R.string.arrived_dialog_no, null)
+            .show()
+    }
+    /** Активирует "взятие направления": сохраняет цель, будит GPS-опрос в
+     * сервисе (важно, если сейчас IDLE), обновляет UI (кнопка/маркер/линия).
+     * Работает независимо от TrackingMode — RECORDING продолжает писать
+     * трек как ни в чём не бывало. */
+    private fun takeDirectionTo(latitude: Double, longitude: Double) {
+        val app = application as TrailBackApp
+        lifecycleScope.launch {
+            app.trackingRepository.setNavigationTarget(latitude, longitude)
+            trackingService?.onNavigationTargetChanged(true)
+            refreshNavigationTargetUi()
+        }
+    }
+    /** Ручная отмена через кнопку слева от главной. */
+    private fun confirmCancelNavigationTarget() {
+        AlertDialog.Builder(this)
+            .setMessage(R.string.cancel_direction_confirm_message)
+            .setPositiveButton(R.string.arrived_dialog_yes) { _, _ -> clearNavigationTarget() }
+            .setNegativeButton(R.string.arrived_dialog_no, null)
+            .show()
+    }
+    /** Автоматический диалог прибытия — та же логика (радиус + серия фиксов
+     * + точность), что и "Вы вернулись!" в режиме "Домой" (см. решение по ТЗ,
+     * HomeArrivalDetector переиспользуется в TrackingService как есть). */
+    private fun showDirectionArrivedDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.direction_arrived_dialog_title)
+            .setMessage(R.string.direction_arrived_dialog_message)
+            .setCancelable(false)
+            .setPositiveButton(R.string.arrived_dialog_yes) { _, _ ->
+                trackingService?.onDirectionArrivalDialogDismissed(confirmed = true)
+                clearNavigationTarget()
+            }
+            .setNegativeButton(R.string.arrived_dialog_no) { _, _ ->
+                trackingService?.onDirectionArrivalDialogDismissed(confirmed = false)
+            }
+            .show()
+    }
+    private fun clearNavigationTarget() {
+        val app = application as TrailBackApp
+        lifecycleScope.launch {
+            app.trackingRepository.clearNavigationTarget()
+            trackingService?.onNavigationTargetChanged(false)
+            refreshNavigationTargetUi()
+            mapController.updateNavigationTargetLine(null, null)
+        }
+    }
+    /** Синхронизирует локальный кэш navigationTarget с TrackingStateStore и
+     * перерисовывает маркер/кнопку — вызывается после любого изменения цели
+     * и при onCreate/onResume (восстановление после сна/краша процесса). */
+    private fun refreshNavigationTargetUi() {
+        val app = application as TrailBackApp
+        navigationTarget = if (app.trackingStateStore.navigationTargetActive) {
+            app.trackingStateStore.navigationTargetLatitude to app.trackingStateStore.navigationTargetLongitude
+        } else {
+            null
+        }
+        mapController.updateNavigationTargetMarker(navigationTarget)
+        binding.cancelDirectionButton.visibility = if (navigationTarget != null) {
+            android.view.View.VISIBLE
+        } else {
+            android.view.View.GONE
+        }
     }
     private fun observeViewModel() {
         lifecycleScope.launch {

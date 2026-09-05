@@ -64,6 +64,13 @@
     <string name="exit_confirm_message">Are you sure you want to exit the app?</string>
     <string name="exit_locked_in_returning">Cannot exit the app while "Home" mode is active</string>
     <string name="manual_arrival_reset_confirm_message">Are you sure? Return mode to the starting point will be reset!</string>
+    <!-- НОВОЕ: "Взятие направления" (long-press on map) -->
+    <string name="long_press_dialog_title">What do you want to do with this point?</string>
+    <string name="long_press_save_place">Save to marked places</string>
+    <string name="long_press_take_direction">Take direction here</string>
+    <string name="cancel_direction_confirm_message">Cancel taking direction?</string>
+    <string name="direction_arrived_dialog_title">You are here!</string>
+    <string name="direction_arrived_dialog_message">Have you reached the selected point?</string>
     <!-- About screen -->
     <string name="about_intro">A reliable navigation tool for the forest, built to work with no internet or cell coverage at all. The app helps you mark an entry point (say, where you parked the car or a forest track) and find your way back to it without fail.</string>
     <string name="about_maps_title">🗺️ Offline maps</string>

@@ -28,6 +28,10 @@ class CompassActivity : AppCompatActivity() {
     // Кэшируется один раз при входе в режим "Домой", чтобы пересчёт азимута
     // на каждый тик компаса не требовал обращения к БД.
     private var homeEntryPoint: EntryPoint? = null
+    // НОВОЕ: обобщённая цель для recomputeArrow() — заполняется координатами
+    // точки входа (режим RETURNING) либо координатами "взятия направления"
+    // (режим DIRECTION), сам алгоритм расчёта стрелки при этом не меняется.
+    private var arrowTargetLocation: Location? = null
     private var lastLocation: Location? = null
     private var currentHeadingDegrees: Float = 0f
     private var locationObserverJob: kotlinx.coroutines.Job? = null
@@ -59,13 +63,31 @@ class CompassActivity : AppCompatActivity() {
         binding = ActivityCompassBinding.inflate(layoutInflater)
         setContentView(binding.root)
         val app = application as TrailBackApp
-        val isReturning = app.trackingStateStore.mode == TrackingMode.RETURNING
-        binding.compassView.mode = if (isReturning) CompassView.Mode.RETURNING else CompassView.Mode.NORMAL
         infoPanelController = InfoPanelController(this, binding.topInfoPanel)
-        if (isReturning) {
-            lifecycleScope.launch {
-                homeEntryPoint = app.trackingRepository.getActiveEntryPoint()
-                recomputeArrow()
+        // НОВОЕ: приоритет режимов стрелки — RETURNING ("Домой") главнее
+        // DIRECTION ("взятие направления"), см. решение по ТЗ. На практике
+        // оба активными одновременно быть не должны (enterReturningMode()
+        // сам чистит navigationTarget), но проверяем в этом порядке для
+        // надёжности.
+        when {
+            app.trackingStateStore.mode == TrackingMode.RETURNING -> {
+                binding.compassView.mode = CompassView.Mode.RETURNING
+                lifecycleScope.launch {
+                    homeEntryPoint = app.trackingRepository.getActiveEntryPoint()
+                    arrowTargetLocation = homeEntryPoint?.let { entryPointToLocation(it) }
+                    recomputeArrow()
+                }
+            }
+            app.trackingStateStore.navigationTargetActive -> {
+                binding.compassView.mode = CompassView.Mode.DIRECTION
+                binding.compassView.arrowAccentColor = DIRECTION_ARROW_COLOR
+                arrowTargetLocation = Location("direction_target").apply {
+                    latitude = app.trackingStateStore.navigationTargetLatitude
+                    longitude = app.trackingStateStore.navigationTargetLongitude
+                }
+            }
+            else -> {
+                binding.compassView.mode = CompassView.Mode.NORMAL
             }
         }
         sensorManager = CompassSensorManager(this) { heading ->
@@ -130,10 +152,19 @@ class CompassActivity : AppCompatActivity() {
                     lastLocation = location
                     sensorManager.updateLocationForDeclination(location)
                     recomputeArrow()
-                    val entryPointForDistance = homeEntryPoint.takeIf {
-                        binding.compassView.mode == CompassView.Mode.RETURNING
+                    // НОВОЕ: дистанция до цели — для RETURNING берём entryPoint
+                    // (как раньше), для DIRECTION — arrowTargetLocation
+                    // (простые координаты, не связанные с сохранённой точкой входа).
+                    when (binding.compassView.mode) {
+                        CompassView.Mode.RETURNING ->
+                            infoPanelController.updateDistanceToDestination(location, homeEntryPoint)
+                        CompassView.Mode.DIRECTION ->
+                            arrowTargetLocation?.let {
+                                infoPanelController.updateDistanceToDestination(location, it.latitude, it.longitude)
+                            }
+                        CompassView.Mode.NORMAL ->
+                            infoPanelController.clearDistanceToDestination()
                     }
-                    infoPanelController.updateDistanceToDestination(location, entryPointForDistance)
                     infoPanelController.updateRouteCounter()
                 }
             }
@@ -146,15 +177,13 @@ class CompassActivity : AppCompatActivity() {
      * от GPS-джиттера и переход через 0°/360° уже в разностном угле.
      */
     private fun recomputeArrow() {
-        if (binding.compassView.mode != CompassView.Mode.RETURNING) return
+        // НОВОЕ: работает для RETURNING И DIRECTION одинаково — цель уже
+        // выбрана заранее в arrowTargetLocation (см. onCreate), сам расчёт
+        // азимута и сглаживание идентичны режиму "Домой" (по требованию ТЗ).
+        if (binding.compassView.mode == CompassView.Mode.NORMAL) return
         val current = lastLocation ?: return
-        val entryPoint = homeEntryPoint ?: return
-        val trueBearing = current.bearingTo(
-            Location("home").apply {
-                latitude = entryPoint.latitude
-                longitude = entryPoint.longitude
-            }
-        )
+        val target = arrowTargetLocation ?: return
+        val trueBearing = current.bearingTo(target)
         // Защита от NaN: bearingTo/currentDeclination могут дать NaN на
         // битых location-фиксах (нередко сразу после выхода из сна) — не
         // пускаем такие значения в фильтр, иначе он замерзает навсегда.
@@ -196,10 +225,18 @@ class CompassActivity : AppCompatActivity() {
         smoothedArrowDeg = AzimuthNormalizer.normalize(smoothedArrowDeg)
         binding.compassView.arrowScreenAngleDegrees = smoothedArrowDeg
     }
+    private fun entryPointToLocation(entryPoint: EntryPoint): Location =
+        Location("home").apply {
+            latitude = entryPoint.latitude
+            longitude = entryPoint.longitude
+        }
     companion object {
         // Веса EMA только для второго слоя (стрелка на точку старта) —
         // курс устройства теперь берётся из CompassSensorManager без фильтра.
         private const val EMA_OLD_WEIGHT = 0.92f
         private const val EMA_NEW_WEIGHT = 0.08f
+        // НОВОЕ: цвет стрелки "взятия направления" — бирюзовый, отличается
+        // от оранжевого "Домой", чтобы пользователь не перепутал цели.
+        private const val DIRECTION_ARROW_COLOR = 0xFF40E0D0.toInt()
     }
 }

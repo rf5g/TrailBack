@@ -89,6 +89,16 @@
         app:layout_constraintTop_toBottomOf="@id/bottomButtonSpacer"
         app:layout_constraintBottom_toTopOf="@id/mainActionButton"
         app:layout_constraintEnd_toEndOf="parent" />
+    <!-- НОВОЕ: кнопка отмены "взятия направления" — видна только когда цель
+         навигации активна (см. MapActivity.refreshNavigationTargetUi). -->
+    <ImageButton
+        android:id="@+id/cancelDirectionButton"
+        style="@style/SquareIconButton"
+        android:src="@drawable/ic_cancel_direction"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/mainActionButton"
+        app:layout_constraintTop_toTopOf="@id/mainActionButton"
+        app:layout_constraintEnd_toStartOf="@id/mainActionButton" />
     <!-- Главная кнопка — теперь включает и роль "Я на месте" в режиме "Домой" -->
     <Button
         android:id="@+id/mainActionButton"

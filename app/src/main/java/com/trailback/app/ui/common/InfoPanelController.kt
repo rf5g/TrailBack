@@ -64,10 +64,16 @@ class InfoPanelController(
             panel.distanceToHomeText.text = ""
             return
         }
+        updateDistanceToDestination(current, target.latitude, target.longitude)
+    }
+    /** НОВОЕ: перегрузка для "взятия направления" — там нет сохранённой
+     * EntryPoint, только сырые координаты. Общий подсчёт дистанции вынесен
+     * сюда, чтобы не дублировать Location.distanceBetween в двух местах. */
+    fun updateDistanceToDestination(current: Location, targetLatitude: Double, targetLongitude: Double) {
         val distanceResult = FloatArray(1)
         Location.distanceBetween(
             current.latitude, current.longitude,
-            target.latitude, target.longitude,
+            targetLatitude, targetLongitude,
             distanceResult
         )
         panel.distanceToHomeText.text = DistanceFormatter.format(distanceResult[0])
