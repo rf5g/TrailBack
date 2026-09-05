@@ -23,8 +23,6 @@ import com.trailback.app.databinding.ActivityEntryPointsBinding
 import com.trailback.app.databinding.ItemMenuRowBinding
 import com.trailback.app.service.TrackingService
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Locale
 class EntryPointsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityEntryPointsBinding
     private var trackingService: TrackingService? = null
@@ -133,7 +131,6 @@ class EntryPointsAdapter(
     private val onTap: (EntryPoint) -> Unit,
     private val onLongPress: (EntryPoint) -> Unit
 ) : RecyclerView.Adapter<EntryPointsAdapter.ViewHolder>() {
-    private val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
     inner class ViewHolder(val binding: ItemMenuRowBinding) : RecyclerView.ViewHolder(binding.root)
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemMenuRowBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -141,9 +138,9 @@ class EntryPointsAdapter(
     }
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val point = items[position]
-        holder.binding.titleText.text =
-            "${point.name} — ${dateFormat.format(point.timestamp)}\n" +
-            "%.5f, %.5f".format(point.latitude, point.longitude)
+        // Дата/время уже часть point.name (см. решение по ТЗ — формат
+        // "Вход - сб. 05.09.26 г. 14:07"), координаты в списке не нужны.
+        holder.binding.titleText.text = point.name
         holder.binding.root.setOnClickListener { onTap(point) }
         holder.binding.root.setOnLongClickListener {
             onLongPress(point)

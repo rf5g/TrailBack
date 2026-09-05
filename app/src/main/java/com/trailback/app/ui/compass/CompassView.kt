@@ -42,6 +42,16 @@ class CompassView @JvmOverloads constructor(
         color = Color.DKGRAY
         strokeWidth = 3f
     }
+    // Крупные засечки каждые 30° — толще мелких (см. решение по ТЗ).
+    private val majorTickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.DKGRAY
+        strokeWidth = 5f
+    }
+    private val degreeLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.LTGRAY
+        textAlign = Paint.Align.CENTER
+        textSize = 32f
+    }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
@@ -88,15 +98,31 @@ class CompassView @JvmOverloads constructor(
     }
     private fun drawDial(canvas: Canvas, cx: Float, cy: Float, radius: Float) {
         canvas.drawCircle(cx, cy, radius, dialPaint)
-        for (deg in 0 until 360 step 10) {
+        // Засечки каждые 5° (мелкие) и каждые 30° (крупные, с подписью
+        // значения в градусах) — см. решение по ТЗ. На 0/90/180/270 вместо
+        // числа рисуются буквы сторон света (см. цикл labelAngles ниже), не
+        // дублируем то же место цифрой.
+        val cardinalDegrees = setOf(0, 90, 180, 270)
+        for (deg in 0 until 360 step 5) {
+            val isMajor = deg % 30 == 0
             val angleRad = Math.toRadians((deg - 90).toDouble())
             val outer = radius
-            val inner = if (deg % 90 == 0) radius - 30f else radius - 15f
+            val inner = if (isMajor) radius - 30f else radius - 15f
+            val tickLinePaint = if (isMajor) majorTickPaint else tickPaint
             val x1 = cx + (outer * Math.cos(angleRad)).toFloat()
             val y1 = cy + (outer * Math.sin(angleRad)).toFloat()
             val x2 = cx + (inner * Math.cos(angleRad)).toFloat()
             val y2 = cy + (inner * Math.sin(angleRad)).toFloat()
-            canvas.drawLine(x1, y1, x2, y2, tickPaint)
+            canvas.drawLine(x1, y1, x2, y2, tickLinePaint)
+            if (isMajor && deg !in cardinalDegrees) {
+                val labelRadius = radius - 55f
+                val lx = cx + (labelRadius * Math.cos(angleRad)).toFloat()
+                val ly = cy + (labelRadius * Math.sin(angleRad)).toFloat() + 11f
+                canvas.save()
+                canvas.rotate(headingDegrees, lx, ly) // цифры остаются читаемыми
+                canvas.drawText(deg.toString(), lx, ly, degreeLabelPaint)
+                canvas.restore()
+            }
         }
         val labels = if (isRussian) listOf("С", "В", "Ю", "З") else listOf("N", "E", "S", "W")
         val labelAngles = listOf(0, 90, 180, 270)

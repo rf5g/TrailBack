@@ -29,7 +29,11 @@ class MapViewModel(
     }
     fun onStartConfirmed(location: Location) {
         viewModelScope.launch {
-            val name = "Вход ${java.text.SimpleDateFormat("dd.MM HH:mm").format(java.util.Date())}"
+            // Формат имени точки входа (см. решение по ТЗ): "Вход - сб. 05.09.26 г. 14:07"
+            val nameFormat = java.text.SimpleDateFormat(
+                "EEE'.' dd.MM.yy 'г.' HH:mm", java.util.Locale.getDefault()
+            )
+            val name = "Вход - ${nameFormat.format(java.util.Date())}"
             repository.startNewRoute(location.latitude, location.longitude, name)
             _mode.value = TrackingMode.RECORDING
             _distanceMeters.value = 0f

@@ -61,8 +61,10 @@ class MapController(
      * и включается заново по нажатию кнопки центрирования.
      */
     private var followModeEnabled = true
+    // Тот же стиль, что и у имени точки входа ("Вход - сб. 05.09.26 г. 14:07"),
+    // но без года и "г." — на карте компактнее, год избыточен (см. решение по ТЗ).
     private val entryPointDateFormat = java.text.SimpleDateFormat(
-        "dd.MMM. H:mm", java.util.Locale.getDefault()
+        "EEE'.' dd.MM HH:mm", java.util.Locale.getDefault()
     )
     init {
         AndroidGraphicFactory.createInstance(context.applicationContext as android.app.Application)
@@ -464,7 +466,7 @@ class MapController(
         val textPaint = android.graphics.Paint().apply {
             isAntiAlias = true
             color = android.graphics.Color.WHITE
-            textSize = 13f * density
+            textSize = 18f * density // увеличено для читаемости (было 13f, см. решение по ТЗ)
             textAlign = android.graphics.Paint.Align.CENTER
             setShadowLayer(3f * density, 0f, 0f, android.graphics.Color.BLACK)
         }
