@@ -27,6 +27,8 @@
     <string name="tracking_notification_idle">Ready</string>
     <string name="tracking_notification_recording">Recording your route</string>
     <string name="tracking_notification_returning">Returning to start point</string>
+    <!-- НОВОЕ: кнопка "Выход" в постоянном уведомлении -->
+    <string name="notification_exit_action">Exit</string>
     <string name="notification_stopped_title">Recording stopped</string>
     <string name="notification_stopped_text">Your route has been saved</string>
     <string name="notification_returning_title">Return mode enabled</string>
@@ -82,6 +84,8 @@
     <string name="about_mode_home_body">When you decide to head back, press "Home". The screen switches to navigation mode. A large red arrow appears on the compass dial. No matter how you turn the phone, it always points exactly toward your entry point — just walk where it points.</string>
     <string name="about_mode_arrived_title">[ I AM HERE ] — Finishing the trip</string>
     <string name="about_mode_arrived_body">Once you\'re back at your starting point, press this button. The app recognizes the trip is done, stops GPS to save battery, and resets the route, getting the button ready for your next adventure.</string>
+    <string name="about_direction_title">🎯 Take Direction</string>
+    <string name="about_direction_body">Long-press anywhere on the map to choose: save the point to marked places, or "Take direction here". Choosing a direction draws a turquoise dashed line to that point and shows a matching turquoise arrow on the compass — independent of whether a route is currently being recorded, and works even before you press "Start". A small cancel button appears next to the main action button while a direction is active. Pressing "Home" always overrides and clears the taken direction, switching the arrow back to your starting point instead.</string>
     <string name="about_compass_title">🧭 How the compass works (two layers)</string>
     <string name="about_compass_body">The bottom layer (the dial) shows the cardinal directions and can work in magnetic or true mode — your choice. The top layer (the red arrow) only appears in "Home" mode. It calculates the bearing between your current position and the saved starting point. The dial rotates as you turn, while the red arrow keeps pointing at your target.</string>
     <string name="about_warning_title">⚠️ Important warning</string>

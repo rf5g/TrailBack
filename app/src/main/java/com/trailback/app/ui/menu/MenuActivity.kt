@@ -46,6 +46,13 @@ class MenuActivity : AppCompatActivity() {
         )
         binding.menuList.layoutManager = LinearLayoutManager(this)
         binding.menuList.adapter = MenuAdapter(items)
+        // НОВОЕ: кнопка "Выход" в постоянном уведомлении (см. NotificationHelper)
+        // открывает этот экран с данным флагом — используем ТОТ ЖЕ onExitTapped(),
+        // что и кнопка меню, чтобы поведение (блокировка в режиме "Домой",
+        // диалог подтверждения) было идентичным (см. решение по ТЗ).
+        if (intent.getBooleanExtra(EXTRA_AUTO_EXIT, false)) {
+            onExitTapped()
+        }
     }
     /**
      * Выход заблокирован в активном режиме "Домой" (см. решение по ТЗ).
@@ -75,11 +82,23 @@ class MenuActivity : AppCompatActivity() {
                 val notificationManager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
                 notificationManager.cancel(com.trailback.app.service.NotificationHelper.FOREGROUND_NOTIFICATION_ID)
                 stopService(Intent(this, com.trailback.app.service.TrackingService::class.java))
-                finishAffinity()
+                // НОВОЕ: finishAndRemoveTask() вместо finishAffinity() — иначе
+                // задача приложения оставалась висеть в "Недавних" (Recent
+                // Apps/диспетчере задач) даже после killProcess(), т.к.
+                // finishAffinity() закрывает Activity, но не убирает саму
+                // запись о задаче из системного списка (см. решение по ТЗ).
+                finishAndRemoveTask()
                 android.os.Process.killProcess(android.os.Process.myPid())
             }
             .setNegativeButton(com.trailback.app.R.string.arrived_dialog_no, null)
             .show()
     }
+    companion object {
+        /** Флаг для запуска этого экрана с автоматическим вызовом onExitTapped()
+         * — используется кнопкой "Выход" в постоянном уведомлении (см.
+         * NotificationHelper.buildForegroundNotification). */
+        const val EXTRA_AUTO_EXIT = "extra_auto_exit"
+    }
 }
 data class MenuItem(val title: String, val onClick: () -> Unit)
+

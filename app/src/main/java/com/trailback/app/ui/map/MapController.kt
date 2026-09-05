@@ -485,26 +485,38 @@ class MapController(
         mapView.layerManager.layers.add(marker)
         entryPointMarker = marker
     }
-    /** Рисует подпись текстом сверху и значок снизу в одном битмапе. */
+    /** Рисует подпись текстом сверху и значок снизу в одном битмапе.
+     * Текст — акцентным цветом кнопок с белой обводкой (два прохода: сперва
+     * STROKE белым, затем FILL оранжевым поверх) — читается на любом фоне
+     * карты лучше, чем прежний белый текст с размытой тенью (см. решение по ТЗ). */
     private fun createLabeledIconBitmap(iconRes: Int, iconSizePx: Int, label: String): org.mapsforge.core.graphics.Bitmap {
         val iconDrawable = ContextCompat.getDrawable(context, iconRes)
-        val textPaint = android.graphics.Paint().apply {
+        val textFillPaint = android.graphics.Paint().apply {
+            isAntiAlias = true
+            color = ACCENT_COLOR_MAPSFORGE // тот же цвет, что и у главной кнопки
+            textSize = 18f * density
+            textAlign = android.graphics.Paint.Align.CENTER
+            style = android.graphics.Paint.Style.FILL
+        }
+        val textStrokePaint = android.graphics.Paint().apply {
             isAntiAlias = true
             color = android.graphics.Color.WHITE
-            textSize = 18f * density // увеличено для читаемости (было 13f, см. решение по ТЗ)
+            textSize = 18f * density
             textAlign = android.graphics.Paint.Align.CENTER
-            setShadowLayer(3f * density, 0f, 0f, android.graphics.Color.BLACK)
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 3f * density
         }
-        val textWidth = textPaint.measureText(label)
-        val horizontalPadding = 8f * density
+        val textWidth = textFillPaint.measureText(label)
+        val horizontalPadding = 10f * density // чуть больше — под выступающую обводку
         val canvasWidth = maxOf(iconSizePx.toFloat(), textWidth + horizontalPadding * 2).toInt()
-        val textMetrics = textPaint.fontMetrics
+        val textMetrics = textFillPaint.fontMetrics
         val textHeight = (textMetrics.descent - textMetrics.ascent)
         val textGap = 2f * density
         val totalHeight = (textHeight + textGap + iconSizePx).toInt()
         val androidBitmap = AndroidBitmapType.createBitmap(canvasWidth, totalHeight, AndroidBitmapType.Config.ARGB_8888)
         val canvas = AndroidCanvasType(androidBitmap)
-        canvas.drawText(label, canvasWidth / 2f, -textMetrics.ascent, textPaint)
+        canvas.drawText(label, canvasWidth / 2f, -textMetrics.ascent, textStrokePaint) // обводка снизу
+        canvas.drawText(label, canvasWidth / 2f, -textMetrics.ascent, textFillPaint) // заливка поверх
         val iconLeft = (canvasWidth - iconSizePx) / 2
         val iconTop = (textHeight + textGap).toInt()
         iconDrawable?.setBounds(iconLeft, iconTop, iconLeft + iconSizePx, iconTop + iconSizePx)

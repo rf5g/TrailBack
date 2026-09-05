@@ -45,11 +45,26 @@ class NotificationHelper(private val context: Context) {
             Intent(context, MapActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
+        // НОВОЕ: кнопка "Выход" в постоянном уведомлении — открывает
+        // MenuActivity с флагом автозапуска onExitTapped(), т.е. ведёт себя
+        // ТОЧНО так же, как кнопка "Выход" в меню (та же блокировка в
+        // режиме "Домой", тот же диалог подтверждения) — см. решение по ТЗ.
+        // FLAG_ACTIVITY_NEW_TASK обязателен: PendingIntent может сработать,
+        // когда процесс приложения уже не запущен.
+        val exitIntent = Intent(context, com.trailback.app.ui.menu.MenuActivity::class.java).apply {
+            putExtra(com.trailback.app.ui.menu.MenuActivity.EXTRA_AUTO_EXIT, true)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val exitPendingIntent = PendingIntent.getActivity(
+            context, 3, exitIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
         return NotificationCompat.Builder(context, CHANNEL_TRACKING)
             .setSmallIcon(R.drawable.ic_notification_tracking)
             .setContentTitle(context.getString(R.string.app_name))
             .setContentText(contentText)
             .setContentIntent(openAppIntent)
+            .addAction(R.drawable.ic_cancel_direction, context.getString(R.string.notification_exit_action), exitPendingIntent)
             .setOngoing(true)
             .build()
     }

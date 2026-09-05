@@ -176,6 +176,30 @@
                     android:lineSpacingExtra="2dp"
                     android:layout_marginTop="4dp" />
             </LinearLayout>
+            <!-- НОВОЕ: Взятие направления -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_info_card"
+                android:padding="16dp"
+                android:layout_marginBottom="12dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/about_direction_title"
+                    android:textColor="@color/text_white"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/about_direction_body"
+                    android:textColor="@color/text_gray"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="2dp"
+                    android:layout_marginTop="6dp" />
+            </LinearLayout>
             <!-- Компас -->
             <LinearLayout
                 android:layout_width="match_parent"

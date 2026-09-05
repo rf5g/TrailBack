@@ -20,12 +20,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent" />
-    <!-- Левый край: мини-компас сверху -->
+    <!-- Левый край: мини-компас сверху. Размер совпадает с тёмными
+         квадратными кнопками (SquareIconButton, 60dp) — см. решение по ТЗ. -->
     <com.trailback.app.ui.compass.MiniCompassView
         android:id="@+id/miniCompassView"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_margin="12dp"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_margin="8dp"
         android:background="@drawable/bg_circle_panel"
         app:layout_constraintTop_toBottomOf="@id/topInfoPanel"
         app:layout_constraintStart_toStartOf="parent" />
